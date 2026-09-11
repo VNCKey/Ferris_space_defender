@@ -271,6 +271,7 @@ pub fn run() {
         .init_resource::<Leaderboard>()
         .init_resource::<CurrentPlayer>()
         .init_resource::<GameTimers>()
+        .insert_resource(ClearColor(Color::srgb(0.0, 0.0, 0.0)))
         .add_systems(Startup, setup_app)
         .add_systems(Update, ui_name_input.run_if(in_state(AppState::NameInput)))
         .add_systems(Update, ui_game_over.run_if(in_state(AppState::GameOver)))
@@ -363,18 +364,27 @@ fn setup_app(
         snd_powerup_pickup,
     });
 
-    // Campo de estrellas cósmicas
+    // Campo de estrellas cósmicas con 3 capas de profundidad
     let mut rng = rand::thread_rng();
-    for _ in 0..90 {
+    for _ in 0..130 {
         let x = rng.gen_range(-380.0..380.0);
         let y = rng.gen_range(-650.0..650.0);
-        let speed = rng.gen_range(25.0..80.0);
-        let size = rng.gen_range(1.5..3.2);
+        let tier = rng.gen_range(0..10);
+        let (speed, size, alpha) = if tier < 6 {
+            // Capa lejana: estrellas distantes y tenues
+            (rng.gen_range(16.0..35.0), rng.gen_range(1.2..2.0), rng.gen_range(0.35..0.65))
+        } else if tier < 9 {
+            // Capa media: estrellas nítidas de velocidad media
+            (rng.gen_range(40.0..75.0), rng.gen_range(2.0..2.8), rng.gen_range(0.70..0.90))
+        } else {
+            // Capa cercana: polvo cósmico veloz y brillante
+            (rng.gen_range(85.0..140.0), rng.gen_range(2.8..4.0), rng.gen_range(0.85..1.0))
+        };
 
         commands.spawn((
             SpriteBundle {
                 sprite: Sprite {
-                    color: Color::srgba(0.8, 0.9, 1.0, rng.gen_range(0.3..0.95)),
+                    color: Color::srgba(0.88, 0.94, 1.0, alpha),
                     custom_size: Some(Vec2::splat(size)),
                     ..default()
                 },
@@ -1278,7 +1288,7 @@ fn ui_name_input(
     let ctx = contexts.ctx_mut();
 
     egui::CentralPanel::default()
-        .frame(egui::Frame::default().fill(egui::Color32::from_rgb(8, 12, 22)))
+        .frame(egui::Frame::default().fill(egui::Color32::from_rgb(3, 4, 6)))
         .show(ctx, |ui| {
             egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
@@ -1473,7 +1483,7 @@ fn ui_playing_hud(
     let ctx = contexts.ctx_mut();
 
     egui::TopBottomPanel::top("top_hud")
-        .frame(egui::Frame::default().fill(egui::Color32::from_rgba_unmultiplied(10, 15, 28, 210)))
+        .frame(egui::Frame::default().fill(egui::Color32::from_rgba_unmultiplied(2, 2, 4, 210)))
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.label(
@@ -1569,7 +1579,7 @@ fn ui_game_over(
     let ctx = contexts.ctx_mut();
 
     egui::CentralPanel::default()
-        .frame(egui::Frame::default().fill(egui::Color32::from_rgb(18, 10, 14)))
+        .frame(egui::Frame::default().fill(egui::Color32::from_rgb(4, 2, 4)))
         .show(ctx, |ui| {
             egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
