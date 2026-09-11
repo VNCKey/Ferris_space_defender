@@ -163,6 +163,7 @@ pub struct GameAssets {
     pub snd_enemy_death: Handle<AudioSource>,
     pub snd_boss_death: Handle<AudioSource>,
     pub snd_powerup_pickup: Handle<AudioSource>,
+    pub bgm_space: Handle<AudioSource>,
 }
 
 #[derive(Resource)]
@@ -187,6 +188,9 @@ impl Default for GameTimers {
 // ============================================================================
 // Componentes
 // ============================================================================
+
+#[derive(Component)]
+pub struct BackgroundMusic;
 
 #[derive(Component)]
 pub struct Player;
@@ -327,6 +331,7 @@ fn setup_app(
     let snd_enemy_death = asset_server.load("audio/enemy_death.ogg");
     let snd_boss_death = asset_server.load("audio/boss_death.ogg");
     let snd_powerup_pickup = asset_server.load("audio/powerup_pickup.ogg");
+    let bgm_space = asset_server.load("audio/bgm_space.ogg");
 
     // 7 Enemigos regulares (enemy_1 a enemy_7)
     let mut regular_enemies = Vec::new();
@@ -362,6 +367,7 @@ fn setup_app(
         snd_enemy_death,
         snd_boss_death,
         snd_powerup_pickup,
+        bgm_space,
     });
 
     // Campo de estrellas cósmicas con 3 capas de profundidad
@@ -421,6 +427,15 @@ fn setup_playing(
     timers.player_shoot.reset();
     timers.wave_timer.reset();
     timers.boss_spawn_timer.reset();
+
+    // Música de combate espacial en bucle continuo
+    commands.spawn((
+        AudioBundle {
+            source: assets.bgm_space.clone(),
+            settings: PlaybackSettings::LOOP.with_volume(bevy::audio::Volume::new(0.38)),
+        },
+        BackgroundMusic,
+    ));
 
     // Nave Principal
     commands.spawn((
@@ -486,6 +501,7 @@ fn cleanup_playing(
     query_particles: Query<Entity, With<ExplosionParticle>>,
     query_powerups: Query<Entity, With<PowerUpItem>>,
     query_planets: Query<Entity, With<BackgroundPlanet>>,
+    query_bgm: Query<Entity, With<BackgroundMusic>>,
 ) {
     for e in query_player.iter() {
         commands.entity(e).despawn_recursive();
@@ -509,6 +525,9 @@ fn cleanup_playing(
         commands.entity(e).despawn_recursive();
     }
     for e in query_planets.iter() {
+        commands.entity(e).despawn_recursive();
+    }
+    for e in query_bgm.iter() {
         commands.entity(e).despawn_recursive();
     }
 }
