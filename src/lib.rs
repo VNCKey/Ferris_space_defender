@@ -2545,11 +2545,11 @@ fn ui_game_over(
                         ui.add_space(6.0);
 
                         // Medalla de Rango Ganada (Requerimientos de Puntaje Torneo)
-                        let (rank_name, rank_color, rank_tex_id) = if current_player.score >= 15000 {
+                        let (rank_name, rank_color, rank_tex_id) = if current_player.score >= 200000 {
                             ("🥇 RANGO S: LEYENDA DE RUST", egui::Color32::from_rgb(255, 215, 0), rank_s_id)
-                        } else if current_player.score >= 8000 {
+                        } else if current_player.score >= 75000 {
                             ("🥈 RANGO A: COMANDANTE SENIOR", egui::Color32::from_rgb(100, 240, 255), rank_a_id)
-                        } else if current_player.score >= 3000 {
+                        } else if current_player.score >= 25000 {
                             ("🥉 RANGO B: PILOTO CERTIFICADO", egui::Color32::from_rgb(120, 255, 120), rank_b_id)
                         } else {
                             ("🎖️ RANGO C: CADETE SPACE", egui::Color32::from_rgb(200, 200, 200), rank_c_id)
