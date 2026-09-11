@@ -142,6 +142,11 @@ pub enum PowerUpType {
 #[derive(Resource)]
 pub struct GameAssets {
     pub player_ship: Handle<Image>,
+    pub shield_dome: Handle<Image>,
+    pub powerup_triple: Handle<Image>,
+    pub powerup_shield: Handle<Image>,
+    pub powerup_health: Handle<Image>,
+    pub powerup_nuke: Handle<Image>,
     pub regular_enemies: Vec<Handle<Image>>,
     pub boss_enemies: Vec<Handle<Image>>,
     pub planets: Vec<Handle<Image>>,
@@ -287,6 +292,11 @@ fn setup_app(
     commands.spawn(Camera2dBundle::default());
 
     let player_ship = asset_server.load("textures/player/ship.png");
+    let shield_dome = asset_server.load("textures/effects/shield_dome.png");
+    let powerup_triple = asset_server.load("textures/powerups/triple.png");
+    let powerup_shield = asset_server.load("textures/powerups/shield.png");
+    let powerup_health = asset_server.load("textures/powerups/health.png");
+    let powerup_nuke = asset_server.load("textures/powerups/nuke.png");
 
     // 7 Enemigos regulares (enemy_1 a enemy_7)
     let mut regular_enemies = Vec::new();
@@ -308,6 +318,11 @@ fn setup_app(
 
     commands.insert_resource(GameAssets {
         player_ship,
+        shield_dome,
+        powerup_triple,
+        powerup_shield,
+        powerup_health,
+        powerup_nuke,
         regular_enemies,
         boss_enemies,
         planets,
@@ -375,12 +390,13 @@ fn setup_playing(
         Player,
     ));
 
-    // Escudo visual de neón sobre la nave
+    // Escudo visual holografico circular
     commands.spawn((
         SpriteBundle {
+            texture: assets.shield_dome.clone(),
             sprite: Sprite {
-                color: Color::srgba(0.2, 0.8, 1.0, 0.45),
-                custom_size: Some(Vec2::splat(110.0)),
+                color: Color::srgba(1.0, 1.0, 1.0, 0.85),
+                custom_size: Some(Vec2::new(135.0, 115.0)),
                 ..default()
             },
             transform: Transform::from_xyz(0.0, -260.0, 9.5),
@@ -493,16 +509,21 @@ fn player_input_system(
 }
 
 fn shield_visual_system(
+    time: Res<Time>,
     current_player: Res<CurrentPlayer>,
     player_query: Query<&Transform, (With<Player>, Without<PlayerShieldVisual>)>,
-    mut shield_query: Query<(&mut Transform, &mut Visibility), With<PlayerShieldVisual>>,
+    mut shield_query: Query<(&mut Transform, &mut Visibility, &mut Sprite), With<PlayerShieldVisual>>,
 ) {
     if let Ok(player_tr) = player_query.get_single() {
-        if let Ok((mut shield_tr, mut visibility)) = shield_query.get_single_mut() {
+        if let Ok((mut shield_tr, mut visibility, mut sprite)) = shield_query.get_single_mut() {
             shield_tr.translation = player_tr.translation;
             shield_tr.translation.z = 9.5;
             if current_player.shield > 0.0 {
                 *visibility = Visibility::Visible;
+                let pulse = (time.elapsed_seconds() * 4.5).sin() * 0.04 + 1.0;
+                shield_tr.scale = Vec3::splat(pulse);
+                let alpha = (current_player.shield / current_player.max_shield).clamp(0.4, 0.95);
+                sprite.color = Color::srgba(1.0, 1.0, 1.0, alpha);
             } else {
                 *visibility = Visibility::Hidden;
             }
@@ -828,15 +849,18 @@ fn powerup_system(
 ) {
     let dt = time.delta_seconds();
 
-    if let Ok(player_tr) = query_player.get_single() {
-        let p_pos = player_tr.translation.truncate();
+    for (p_entity, mut p_tr, powerup) in query_powerups.iter_mut() {
+        p_tr.translation.y -= powerup.speed * dt;
+        p_tr.rotate_z(1.4 * dt);
+        let pulse = (time.elapsed_seconds() * 4.0).sin() * 0.08 + 1.0;
+        p_tr.scale = Vec3::splat(pulse);
 
-        for (p_entity, mut p_tr, powerup) in query_powerups.iter_mut() {
-            p_tr.translation.y -= powerup.speed * dt;
+        if let Ok(player_tr) = query_player.get_single() {
+            let p_pos = player_tr.translation.truncate();
             let item_pos = p_tr.translation.truncate();
 
             // Colision con el jugador
-            if p_pos.distance(item_pos) < 42.0 {
+            if p_pos.distance(item_pos) < 46.0 {
                 match powerup.kind {
                     PowerUpType::TripleShot => {
                         current_player.triple_shot_timer = 12.0;
@@ -851,7 +875,6 @@ fn powerup_system(
                         current_player.status_message = "CASCO REPARADO +40".to_string();
                     }
                     PowerUpType::Nuke => {
-                        // Limpia todos los enemigos regulares y genera explosiones
                         for enemy_e in all_regular_enemies.iter() {
                             commands.entity(enemy_e).despawn_recursive();
                         }
@@ -861,31 +884,32 @@ fn powerup_system(
                     }
                 }
                 current_player.status_timer = 2.5;
+                spawn_spark(&mut commands, item_pos);
                 commands.entity(p_entity).despawn();
                 continue;
             }
+        }
 
-            if p_tr.translation.y < -440.0 {
-                commands.entity(p_entity).despawn();
-            }
+        if p_tr.translation.y < -440.0 {
+            commands.entity(p_entity).despawn();
         }
     }
 }
 
-// Spawnea una capsula de PowerUp en el mundo
-fn spawn_powerup_item(commands: &mut Commands, pos: Vec2, kind: PowerUpType) {
-    let color = match kind {
-        PowerUpType::TripleShot => Color::srgb(1.0, 0.2, 0.9), // Magenta
-        PowerUpType::Shield => Color::srgb(0.2, 0.8, 1.0),     // Cian
-        PowerUpType::Health => Color::srgb(0.2, 1.0, 0.4),     // Verde
-        PowerUpType::Nuke => Color::srgb(1.0, 0.85, 0.2),      // Dorado
+// Spawnea una capsula de PowerUp brillante en el mundo
+fn spawn_powerup_item(commands: &mut Commands, assets: &GameAssets, pos: Vec2, kind: PowerUpType) {
+    let texture = match kind {
+        PowerUpType::TripleShot => assets.powerup_triple.clone(),
+        PowerUpType::Shield => assets.powerup_shield.clone(),
+        PowerUpType::Health => assets.powerup_health.clone(),
+        PowerUpType::Nuke => assets.powerup_nuke.clone(),
     };
 
     commands.spawn((
         SpriteBundle {
+            texture,
             sprite: Sprite {
-                color,
-                custom_size: Some(Vec2::splat(28.0)),
+                custom_size: Some(Vec2::splat(38.0)),
                 ..default()
             },
             transform: Transform::from_xyz(pos.x, pos.y, 8.5),
@@ -893,7 +917,7 @@ fn spawn_powerup_item(commands: &mut Commands, pos: Vec2, kind: PowerUpType) {
         },
         PowerUpItem {
             kind,
-            speed: 85.0,
+            speed: 75.0,
         },
     ));
 }
@@ -918,6 +942,7 @@ fn apply_damage_to_player(current_player: &mut ResMut<CurrentPlayer>, damage: f3
 
 fn collision_system(
     mut commands: Commands,
+    assets: Res<GameAssets>,
     mut current_player: ResMut<CurrentPlayer>,
     mut next_state: ResMut<NextState<AppState>>,
     mut leaderboard: ResMut<Leaderboard>,
@@ -956,7 +981,7 @@ fn collision_system(
                             2 => PowerUpType::Health,
                             _ => PowerUpType::Nuke,
                         };
-                        spawn_powerup_item(&mut commands, e_pos, kind);
+                        spawn_powerup_item(&mut commands, &assets, e_pos, kind);
                     }
 
                     if enemy.is_boss {
