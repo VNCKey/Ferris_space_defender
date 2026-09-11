@@ -7,6 +7,8 @@ edition = "2021"
 package = "com.ferriskey.spacedefender"
 label = "Ferris Defender"
 assets = "assets"
+res = "res"
+icon = "@mipmap/ic_launcher"
 target_sdk_version = 34
 min_sdk_version = 24
 
