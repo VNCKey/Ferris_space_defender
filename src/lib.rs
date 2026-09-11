@@ -225,7 +225,16 @@ pub fn run() {
         .run();
 }
 
-fn setup_app(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup_app(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    #[cfg(target_os = "android")] mut egui_settings: ResMut<bevy_egui::EguiSettings>,
+) {
+    #[cfg(target_os = "android")]
+    {
+        // Escala estable y suave sin fluctuaciones de frame
+        egui_settings.scale_factor = 1.0;
+    }
     // Cámara 2D
     commands.spawn(Camera2dBundle::default());
 
@@ -725,170 +734,200 @@ fn ui_name_input(
     mut next_state: ResMut<NextState<AppState>>,
 ) {
     let ctx = contexts.ctx_mut();
-    #[cfg(target_os = "android")]
-    ctx.set_pixels_per_point(2.2);
 
     egui::CentralPanel::default()
         .frame(egui::Frame::default().fill(egui::Color32::from_rgb(8, 12, 22)))
         .show(ctx, |ui| {
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                ui.vertical_centered(|ui| {
-                    ui.add_space(10.0);
-                    ui.heading(
-                        egui::RichText::new("🦀 FERRIS SPACE DEFENDER 🚀")
-                            .size(20.0)
-                            .color(egui::Color32::from_rgb(255, 110, 40))
-                            .strong(),
-                    );
-                    ui.label(
-                        egui::RichText::new("¡Compite por el mejor puntaje y gana un polo de Rust Perú! 🇵🇪")
-                            .size(11.5)
-                            .color(egui::Color32::from_rgb(180, 220, 255)),
-                    );
-                    ui.add_space(10.0);
+            egui::ScrollArea::vertical()
+                .auto_shrink([false, false])
+                .show(ui, |ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.add_space(8.0);
+                        ui.heading(
+                            egui::RichText::new("🦀 FERRIS SPACE DEFENDER 🚀")
+                                .size(21.0)
+                                .color(egui::Color32::from_rgb(255, 110, 40))
+                                .strong(),
+                        );
+                        ui.label(
+                            egui::RichText::new("¡Torneo Comunitario Rust Perú! 🇵🇪")
+                                .size(13.0)
+                                .color(egui::Color32::from_rgb(180, 220, 255)),
+                        );
+                        ui.add_space(8.0);
 
-                    // Tarjeta de Ingreso de Nombre
-                    egui::Frame::default()
-                        .fill(egui::Color32::from_rgb(18, 26, 45))
-                        .rounding(10.0)
-                        .inner_margin(12.0)
-                        .show(ui, |ui| {
-                            ui.label(
-                                egui::RichText::new("👤 Nombre del Concursante:")
-                                    .size(13.0)
-                                    .color(egui::Color32::WHITE)
-                                    .strong(),
-                            );
-                            ui.add_space(4.0);
+                        // Contenedor centrado con ancho fijo para que no se corte en ningún celular
+                        ui.scope(|ui| {
+                            ui.set_max_width(330.0);
 
-                            // Muestra el nombre actual en un marco destacado
+                            // Tarjeta de Ingreso de Nombre
                             egui::Frame::default()
-                                .fill(egui::Color32::from_rgb(10, 15, 28))
-                                .rounding(6.0)
-                                .stroke(egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(255, 180, 50)))
-                                .inner_margin(8.0)
+                                .fill(egui::Color32::from_rgb(18, 26, 45))
+                                .rounding(10.0)
+                                .inner_margin(egui::Margin::symmetric(10.0, 12.0))
+                                .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(45, 65, 105)))
                                 .show(ui, |ui| {
+                                    ui.label(
+                                        egui::RichText::new("👤 Nombre del Concursante:")
+                                            .size(13.0)
+                                            .color(egui::Color32::WHITE)
+                                            .strong(),
+                                    );
+                                    ui.add_space(4.0);
+
+                                    // Caja de visualización del nombre
+                                    egui::Frame::default()
+                                        .fill(egui::Color32::from_rgb(10, 15, 28))
+                                        .rounding(6.0)
+                                        .stroke(egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(255, 180, 50)))
+                                        .inner_margin(8.0)
+                                        .show(ui, |ui| {
+                                            ui.horizontal(|ui| {
+                                                let display_name = if current_player.name.is_empty() {
+                                                    "Toca las teclas abajo...".to_string()
+                                                } else {
+                                                    current_player.name.clone()
+                                                };
+                                                let text_color = if current_player.name.is_empty() {
+                                                    egui::Color32::GRAY
+                                                } else {
+                                                    egui::Color32::from_rgb(255, 220, 80)
+                                                };
+                                                ui.label(
+                                                    egui::RichText::new(display_name)
+                                                        .size(17.0)
+                                                        .color(text_color)
+                                                        .strong(),
+                                                );
+                                            });
+                                        });
+
+                                    ui.add_space(8.0);
+
+                                    // Teclado Virtual Arcade con espaciado ajustado
+                                    ui.spacing_mut().item_spacing = egui::vec2(2.5, 3.5);
+
+                                    let rows: &[&[&str]] = &[
+                                        &["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+                                        &["A", "S", "D", "F", "G", "H", "J", "K", "L", "Ñ"],
+                                        &["Z", "X", "C", "V", "B", "N", "M", "1", "2", "3"],
+                                    ];
+
+                                    for row in rows {
+                                        ui.horizontal(|ui| {
+                                            for &key in *row {
+                                                let btn = ui.add(
+                                                    egui::Button::new(
+                                                        egui::RichText::new(key)
+                                                            .size(13.0)
+                                                            .color(egui::Color32::WHITE)
+                                                            .strong(),
+                                                    )
+                                                    .min_size(egui::vec2(27.0, 30.0))
+                                                    .fill(egui::Color32::from_rgb(32, 48, 80)),
+                                                );
+                                                if btn.clicked() && current_player.name.len() < 14 {
+                                                    current_player.name.push_str(key);
+                                                }
+                                            }
+                                        });
+                                    }
+
+                                    ui.add_space(4.0);
+
                                     ui.horizontal(|ui| {
-                                        let display_name = if current_player.name.is_empty() {
-                                            "Toca las letras abajo...".to_string()
-                                        } else {
-                                            current_player.name.clone()
-                                        };
-                                        let text_color = if current_player.name.is_empty() {
-                                            egui::Color32::GRAY
-                                        } else {
-                                            egui::Color32::from_rgb(255, 220, 80)
-                                        };
-                                        ui.label(egui::RichText::new(display_name).size(18.0).color(text_color).strong());
-                                    });
-                                });
-
-                            ui.add_space(8.0);
-
-                            // Teclado Virtual Arcade en Pantalla
-                            let rows: &[&[&str]] = &[
-                                &["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
-                                &["A", "S", "D", "F", "G", "H", "J", "K", "L", "Ñ"],
-                                &["Z", "X", "C", "V", "B", "N", "M", "1", "2", "3"],
-                            ];
-
-                            for row in rows {
-                                ui.horizontal(|ui| {
-                                    for &key in *row {
-                                        let btn = ui.add(
-                                            egui::Button::new(
-                                                egui::RichText::new(key).size(13.0).color(egui::Color32::WHITE).strong(),
-                                            )
-                                            .min_size(egui::vec2(24.0, 28.0))
-                                            .fill(egui::Color32::from_rgb(32, 45, 75)),
-                                        );
-                                        if btn.clicked() && current_player.name.len() < 12 {
-                                            current_player.name.push_str(key);
+                                        if ui.add(
+                                            egui::Button::new(egui::RichText::new("⌫ Borrar").size(12.0).color(egui::Color32::WHITE).strong())
+                                                .min_size(egui::vec2(85.0, 30.0))
+                                                .fill(egui::Color32::from_rgb(180, 50, 50)),
+                                        ).clicked() {
+                                            current_player.name.pop();
                                         }
+                                        if ui.add(
+                                            egui::Button::new(egui::RichText::new("␣ Espacio").size(12.0).color(egui::Color32::WHITE).strong())
+                                                .min_size(egui::vec2(85.0, 30.0))
+                                                .fill(egui::Color32::from_rgb(50, 75, 115)),
+                                        ).clicked() && current_player.name.len() < 14 {
+                                            current_player.name.push(' ');
+                                        }
+                                        if ui.add(
+                                            egui::Button::new(egui::RichText::new("🎲 Aleatorio").size(12.0).color(egui::Color32::WHITE).strong())
+                                                .min_size(egui::vec2(95.0, 30.0))
+                                                .fill(egui::Color32::from_rgb(40, 130, 90)),
+                                        ).clicked() {
+                                            let nicknames = ["Ferris_Dev", "Rustacean", "Async_Pro", "Borrow_King", "Cargo_Run", "Lima_Coder", "Byte_Master"];
+                                            let mut rng = rand::thread_rng();
+                                            current_player.name = nicknames[rng.gen_range(0..nicknames.len())].to_string();
+                                        }
+                                    });
+
+                                    ui.add_space(10.0);
+
+                                    // Botón Empezar
+                                    let btn_start = ui.add(
+                                        egui::Button::new(
+                                            egui::RichText::new("🚀 ¡EMPEZAR A JUGAR!")
+                                                .size(16.0)
+                                                .color(egui::Color32::WHITE)
+                                                .strong(),
+                                        )
+                                        .min_size(egui::vec2(280.0, 44.0))
+                                        .fill(egui::Color32::from_rgb(220, 50, 40)),
+                                    );
+
+                                    if btn_start.clicked() {
+                                        if current_player.name.trim().is_empty() {
+                                            current_player.name = "Piloto_Rust".to_string();
+                                        }
+                                        next_state.set(AppState::Playing);
                                     }
                                 });
-                                ui.add_space(2.0);
-                            }
 
-                            ui.horizontal(|ui| {
-                                if ui.add(egui::Button::new("⌫ Borrar").min_size(egui::vec2(65.0, 28.0)).fill(egui::Color32::from_rgb(180, 50, 50))).clicked() {
-                                    current_player.name.pop();
-                                }
-                                if ui.add(egui::Button::new("␣ Espacio").min_size(egui::vec2(65.0, 28.0)).fill(egui::Color32::from_rgb(50, 70, 110))).clicked() && current_player.name.len() < 12 {
-                                    current_player.name.push(' ');
-                                }
-                                if ui.add(egui::Button::new("🎲 Aleatorio").min_size(egui::vec2(75.0, 28.0)).fill(egui::Color32::from_rgb(40, 130, 90))).clicked() {
-                                    let nicknames = ["Ferris_Dev", "Rustacean", "Async_Pro", "Borrow_King", "Cargo_Run", "Lima_Coder", "Byte_Master"];
-                                    let mut rng = rand::thread_rng();
-                                    current_player.name = nicknames[rng.gen_range(0..nicknames.len())].to_string();
-                                }
-                            });
+                            ui.add_space(14.0);
 
-                            ui.add_space(10.0);
-
-                            // Botón Empezar
-                            let btn_start = ui.add(
-                                egui::Button::new(
-                                    egui::RichText::new("🚀 ¡EMPEZAR A JUGAR!")
-                                        .size(16.0)
-                                        .color(egui::Color32::WHITE)
-                                        .strong(),
-                                )
-                                .min_size(egui::vec2(240.0, 42.0))
-                                .fill(egui::Color32::from_rgb(220, 50, 40)),
+                            // Tabla de Posiciones / Leaderboard
+                            ui.heading(
+                                egui::RichText::new("🏆 TABLA DE LÍDERES")
+                                    .size(16.0)
+                                    .color(egui::Color32::from_rgb(255, 215, 0)),
                             );
+                            ui.add_space(5.0);
 
-                            if btn_start.clicked() {
-                                if current_player.name.trim().is_empty() {
-                                    current_player.name = "Piloto_Rust".to_string();
-                                }
-                                next_state.set(AppState::Playing);
-                            }
-                        });
-
-                    ui.add_space(15.0);
-
-                    // Tabla de Posiciones / Leaderboard
-                    ui.heading(
-                        egui::RichText::new("🏆 TABLA DE LÍDERES (TOP CLASIFICACIÓN)")
-                            .size(15.0)
-                            .color(egui::Color32::from_rgb(255, 215, 0)),
-                    );
-                    ui.add_space(6.0);
-
-                    egui::Frame::default()
-                        .fill(egui::Color32::from_rgb(14, 20, 35))
-                        .rounding(8.0)
-                        .inner_margin(10.0)
-                        .show(ui, |ui| {
-                            egui::Grid::new("leaderboard_grid")
-                                .striped(true)
-                                .min_col_width(60.0)
+                            egui::Frame::default()
+                                .fill(egui::Color32::from_rgb(14, 20, 35))
+                                .rounding(8.0)
+                                .inner_margin(10.0)
+                                .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(35, 50, 80)))
                                 .show(ui, |ui| {
-                                    ui.label(egui::RichText::new("#").strong().color(egui::Color32::GRAY));
-                                    ui.label(egui::RichText::new("Estudiante").strong().color(egui::Color32::WHITE));
-                                    ui.label(egui::RichText::new("Puntaje").strong().color(egui::Color32::from_rgb(255, 200, 50)));
-                                    ui.label(egui::RichText::new("Oleada").strong().color(egui::Color32::LIGHT_BLUE));
-                                    ui.end_row();
+                                    egui::Grid::new("leaderboard_grid")
+                                        .striped(true)
+                                        .min_col_width(62.0)
+                                        .show(ui, |ui| {
+                                            ui.label(egui::RichText::new("#").strong().color(egui::Color32::GRAY));
+                                            ui.label(egui::RichText::new("Estudiante").strong().color(egui::Color32::WHITE));
+                                            ui.label(egui::RichText::new("Puntaje").strong().color(egui::Color32::from_rgb(255, 200, 50)));
+                                            ui.label(egui::RichText::new("Oleada").strong().color(egui::Color32::LIGHT_BLUE));
+                                            ui.end_row();
 
-                                    for (idx, entry) in leaderboard.entries.iter().take(8).enumerate() {
-                                        let rank_icon = match idx {
-                                            0 => "🥇",
-                                            1 => "🥈",
-                                            2 => "🥉",
-                                            _ => "  ",
-                                        };
-                                        ui.label(format!("{} {}", rank_icon, idx + 1));
-                                        ui.label(&entry.name);
-                                        ui.label(format!("{} pts", entry.score));
-                                        ui.label(format!("Ola {}", entry.wave));
-                                        ui.end_row();
-                                    }
+                                            for (idx, entry) in leaderboard.entries.iter().take(8).enumerate() {
+                                                let rank_icon = match idx {
+                                                    0 => "🥇",
+                                                    1 => "🥈",
+                                                    2 => "🥉",
+                                                    _ => "  ",
+                                                };
+                                                ui.label(format!("{} {}", rank_icon, idx + 1));
+                                                ui.label(&entry.name);
+                                                ui.label(format!("{} pts", entry.score));
+                                                ui.label(format!("Ola {}", entry.wave));
+                                                ui.end_row();
+                                            }
+                                        });
                                 });
+                            ui.add_space(20.0);
                         });
-                    ui.add_space(20.0);
+                    });
                 });
-            });
         });
 }
 
@@ -897,8 +936,6 @@ fn ui_playing_hud(
     current_player: Res<CurrentPlayer>,
 ) {
     let ctx = contexts.ctx_mut();
-    #[cfg(target_os = "android")]
-    ctx.set_pixels_per_point(2.2);
 
     egui::TopBottomPanel::top("top_hud")
         .frame(egui::Frame::default().fill(egui::Color32::from_rgba_unmultiplied(10, 15, 28, 200)))
@@ -916,7 +953,7 @@ fn ui_playing_hud(
                     egui::RichText::new(format!("⭐ {} pts", current_player.score))
                         .color(egui::Color32::from_rgb(255, 215, 50))
                         .strong()
-                        .size(16.0),
+                        .size(15.0),
                 );
 
                 ui.separator();
@@ -936,7 +973,7 @@ fn ui_playing_hud(
                     ui.label(format!("{:.0}%", health_frac * 100.0));
                     let bar = egui::ProgressBar::new(health_frac)
                         .fill(bar_color)
-                        .desired_width(75.0);
+                        .desired_width(70.0);
                     ui.add(bar);
                     ui.label("❤️");
                 });
@@ -951,98 +988,98 @@ fn ui_game_over(
     mut next_state: ResMut<NextState<AppState>>,
 ) {
     let ctx = contexts.ctx_mut();
-    #[cfg(target_os = "android")]
-    ctx.set_pixels_per_point(2.2);
 
     egui::CentralPanel::default()
         .frame(egui::Frame::default().fill(egui::Color32::from_rgb(18, 10, 14)))
         .show(ctx, |ui| {
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                ui.vertical_centered(|ui| {
-                    ui.add_space(15.0);
-                    ui.heading(
-                        egui::RichText::new("💥 ¡NAVE DESTRUIDA! 💥")
-                            .size(24.0)
-                            .color(egui::Color32::from_rgb(255, 60, 60))
-                            .strong(),
-                    );
-                    ui.add_space(8.0);
+            egui::ScrollArea::vertical()
+                .auto_shrink([false, false])
+                .show(ui, |ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.add_space(15.0);
+                        ui.heading(
+                            egui::RichText::new("💥 ¡NAVE DESTRUIDA! 💥")
+                                .size(24.0)
+                                .color(egui::Color32::from_rgb(255, 60, 60))
+                                .strong(),
+                        );
+                        ui.add_space(8.0);
 
-                    ui.label(
-                        egui::RichText::new(format!("¡Buen intento, {}!", current_player.name))
-                            .size(16.0)
-                            .color(egui::Color32::WHITE),
-                    );
+                        ui.label(
+                            egui::RichText::new(format!("¡Buen intento, {}!", current_player.name))
+                                .size(16.0)
+                                .color(egui::Color32::WHITE),
+                        );
 
-                    ui.label(
-                        egui::RichText::new(format!("PUNTAJE FINAL: {} PTS", current_player.score))
-                            .size(22.0)
-                            .color(egui::Color32::from_rgb(255, 215, 0))
-                            .strong(),
-                    );
+                        ui.label(
+                            egui::RichText::new(format!("PUNTAJE FINAL: {} PTS", current_player.score))
+                                .size(22.0)
+                                .color(egui::Color32::from_rgb(255, 215, 0))
+                                .strong(),
+                        );
 
-                    ui.add_space(14.0);
+                        ui.add_space(14.0);
 
-                    // Botón Siguiente Jugador
-                    if ui
-                        .add(
-                            egui::Button::new(
-                                egui::RichText::new("🔄 SIGUIENTE ESTUDIANTE (Registrar otro jugador)")
-                                    .size(14.0)
-                                    .color(egui::Color32::WHITE)
-                                    .strong(),
+                        // Botón Siguiente Jugador
+                        if ui
+                            .add(
+                                egui::Button::new(
+                                    egui::RichText::new("🔄 SIGUIENTE ESTUDIANTE (Registrar otro jugador)")
+                                        .size(14.0)
+                                        .color(egui::Color32::WHITE)
+                                        .strong(),
+                                )
+                                .min_size(egui::vec2(260.0, 42.0))
+                                .fill(egui::Color32::from_rgb(30, 140, 230)),
                             )
-                            .min_size(egui::vec2(260.0, 42.0))
-                            .fill(egui::Color32::from_rgb(30, 140, 230)),
-                        )
-                        .clicked()
-                    {
-                        next_state.set(AppState::NameInput);
-                    }
+                            .clicked()
+                        {
+                            next_state.set(AppState::NameInput);
+                        }
 
-                    ui.add_space(18.0);
+                        ui.add_space(18.0);
 
-                    // Tabla de líderes actualizada
-                    ui.heading(
-                        egui::RichText::new("🏆 CLASIFICACIÓN DEL EVENTO")
-                            .size(15.0)
-                            .color(egui::Color32::from_rgb(255, 200, 50)),
-                    );
-                    ui.add_space(6.0);
+                        // Tabla de líderes actualizada
+                        ui.heading(
+                            egui::RichText::new("🏆 CLASIFICACIÓN DEL EVENTO")
+                                .size(15.0)
+                                .color(egui::Color32::from_rgb(255, 200, 50)),
+                        );
+                        ui.add_space(6.0);
 
-                    egui::Frame::default()
-                        .fill(egui::Color32::from_rgb(25, 18, 26))
-                        .rounding(8.0)
-                        .inner_margin(10.0)
-                        .show(ui, |ui| {
-                            egui::Grid::new("gameover_leaderboard_grid")
-                                .striped(true)
-                                .min_col_width(65.0)
-                                .show(ui, |ui| {
-                                    ui.label("#");
-                                    ui.label("Estudiante");
-                                    ui.label("Puntaje");
-                                    ui.label("Oleada");
-                                    ui.end_row();
-
-                                    for (idx, entry) in leaderboard.entries.iter().take(10).enumerate() {
-                                        let is_current = entry.name == current_player.name && entry.score == current_player.score;
-                                        let name_text = if is_current {
-                                            egui::RichText::new(&entry.name).color(egui::Color32::GREEN).strong()
-                                        } else {
-                                            egui::RichText::new(&entry.name).color(egui::Color32::WHITE)
-                                        };
-
-                                        ui.label(format!("{}", idx + 1));
-                                        ui.label(name_text);
-                                        ui.label(format!("{} pts", entry.score));
-                                        ui.label(format!("Ola {}", entry.wave));
+                        egui::Frame::default()
+                            .fill(egui::Color32::from_rgb(25, 18, 26))
+                            .rounding(8.0)
+                            .inner_margin(10.0)
+                            .show(ui, |ui| {
+                                egui::Grid::new("gameover_leaderboard_grid")
+                                    .striped(true)
+                                    .min_col_width(65.0)
+                                    .show(ui, |ui| {
+                                        ui.label("#");
+                                        ui.label("Estudiante");
+                                        ui.label("Puntaje");
+                                        ui.label("Oleada");
                                         ui.end_row();
-                                    }
-                                });
-                        });
-                    ui.add_space(20.0);
+
+                                        for (idx, entry) in leaderboard.entries.iter().take(10).enumerate() {
+                                            let is_current = entry.name == current_player.name && entry.score == current_player.score;
+                                            let name_text = if is_current {
+                                                egui::RichText::new(&entry.name).color(egui::Color32::GREEN).strong()
+                                            } else {
+                                                egui::RichText::new(&entry.name).color(egui::Color32::WHITE)
+                                            };
+
+                                            ui.label(format!("{}", idx + 1));
+                                            ui.label(name_text);
+                                            ui.label(format!("{} pts", entry.score));
+                                            ui.label(format!("Ola {}", entry.wave));
+                                            ui.end_row();
+                                        }
+                                    });
+                            });
+                        ui.add_space(20.0);
+                    });
                 });
-            });
         });
 }
