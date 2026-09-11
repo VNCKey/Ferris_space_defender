@@ -2062,10 +2062,10 @@ fn ui_name_input(
     assets: Res<GameAssets>,
     mut next_state: ResMut<NextState<AppState>>,
 ) {
-    let card_defensor_id = contexts.image_id(&assets.card_defensor);
-    let card_mago_id = contexts.image_id(&assets.card_mago);
-    let card_asesino_id = contexts.image_id(&assets.card_asesino);
-    let card_artillero_id = contexts.image_id(&assets.card_artillero);
+    let card_defensor_id = contexts.add_image(assets.card_defensor.clone_weak());
+    let card_mago_id = contexts.add_image(assets.card_mago.clone_weak());
+    let card_asesino_id = contexts.add_image(assets.card_asesino.clone_weak());
+    let card_artillero_id = contexts.add_image(assets.card_artillero.clone_weak());
 
     let ctx = contexts.ctx_mut();
 
@@ -2150,9 +2150,10 @@ fn ui_name_input(
                                     ui.set_max_width(340.0);
                                     ui.vertical(|ui| {
                                         ui.horizontal(|ui| {
-                                            if let Some(tex_id) = card_tex_id {
-                                                ui.image((tex_id, egui::vec2(68.0, 95.0)));
-                                            }
+                                            ui.add(egui::Image::new(egui::load::SizedTexture::new(
+                                                card_tex_id,
+                                                egui::vec2(68.0, 95.0),
+                                            )));
                                             ui.vertical(|ui| {
                                                 ui.label(egui::RichText::new(s_class.name()).size(14.0).color(border_color).strong());
                                                 ui.add_space(2.0);
@@ -2243,9 +2244,8 @@ fn ui_skill_draft(
     let mut skill_tex_map = HashMap::new();
     for &skill in &skill_draft.options {
         if let Some(h) = assets.skill_textures.get(&skill) {
-            if let Some(tid) = contexts.image_id(h) {
-                skill_tex_map.insert(skill, tid);
-            }
+            let tid = contexts.add_image(h.clone_weak());
+            skill_tex_map.insert(skill, tid);
         }
     }
 
@@ -2283,7 +2283,10 @@ fn ui_skill_draft(
                                     ui.vertical(|ui| {
                                         ui.horizontal(|ui| {
                                             if let Some(&tex_id) = skill_tex_map.get(&skill) {
-                                                ui.image((tex_id, egui::vec2(65.0, 90.0)));
+                                                ui.add(egui::Image::new(egui::load::SizedTexture::new(
+                                                    tex_id,
+                                                    egui::vec2(65.0, 90.0),
+                                                )));
                                             }
                                             ui.vertical(|ui| {
                                                 let tag_color = if skill.is_active() { egui::Color32::from_rgb(255, 80, 255) } else { egui::Color32::from_rgb(80, 255, 140) };
@@ -2349,7 +2352,6 @@ fn ui_skill_draft(
 fn ui_playing_hud(
     mut contexts: EguiContexts,
     mut current_player: ResMut<CurrentPlayer>,
-    boss_query: Query<&Enemy>,
     mut commands: Commands,
     assets: Res<GameAssets>,
     mut screen_shake: ResMut<ScreenShake>,
@@ -2402,7 +2404,7 @@ fn ui_playing_hud(
             }
 
             // Barra de vida de Jefe
-            for enemy in boss_query.iter() {
+            for (_, enemy, _) in query_enemies.iter() {
                 if enemy.is_boss {
                     let boss_frac = (enemy.health / enemy.max_health).clamp(0.0, 1.0);
                     let bar_color = if enemy.is_enraged { egui::Color32::RED } else { egui::Color32::from_rgb(255, 140, 0) };
@@ -2481,10 +2483,10 @@ fn ui_game_over(
     assets: Res<GameAssets>,
     mut next_state: ResMut<NextState<AppState>>,
 ) {
-    let rank_s_id = contexts.image_id(&assets.rank_s);
-    let rank_a_id = contexts.image_id(&assets.rank_a);
-    let rank_b_id = contexts.image_id(&assets.rank_b);
-    let rank_c_id = contexts.image_id(&assets.rank_c);
+    let rank_s_id = contexts.add_image(assets.rank_s.clone_weak());
+    let rank_a_id = contexts.add_image(assets.rank_a.clone_weak());
+    let rank_b_id = contexts.add_image(assets.rank_b.clone_weak());
+    let rank_c_id = contexts.add_image(assets.rank_c.clone_weak());
 
     let ctx = contexts.ctx_mut();
 
@@ -2523,9 +2525,10 @@ fn ui_game_over(
                             .show(ui, |ui| {
                                 ui.set_max_width(340.0);
                                 ui.vertical(|ui| {
-                                    if let Some(tex_id) = rank_tex_id {
-                                        ui.image((tex_id, egui::vec2(160.0, 210.0)));
-                                    }
+                                    ui.add(egui::Image::new(egui::load::SizedTexture::new(
+                                        rank_tex_id,
+                                        egui::vec2(160.0, 210.0),
+                                    )));
                                     ui.add_space(6.0);
                                     ui.label(egui::RichText::new(rank_name).size(16.0).color(rank_color).strong());
                                     ui.label(egui::RichText::new(format!("PUNTAJE FINAL: {} PTS", current_player.score)).size(18.0).color(egui::Color32::YELLOW).strong());
