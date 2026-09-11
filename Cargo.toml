@@ -36,6 +36,7 @@ bevy = { version = "0.14", default-features = false, features = [
     "multi_threaded",
     "png",
     "vorbis",
+    "default_font",
 ] }
 bevy_egui = "0.28"
 rand = "0.8"

@@ -105,6 +105,10 @@ pub struct CurrentPlayer {
     pub shield_hit_timer: f32,
     pub hull_hit_timer: f32,
     pub invulnerable_timer: f32,
+    pub combo_count: u32,
+    pub combo_timer: f32,
+    pub combo_multiplier: u32,
+    pub max_combo: u32,
 }
 
 impl Default for CurrentPlayer {
@@ -125,6 +129,10 @@ impl Default for CurrentPlayer {
             shield_hit_timer: 0.0,
             hull_hit_timer: 0.0,
             invulnerable_timer: 0.0,
+            combo_count: 0,
+            combo_timer: 0.0,
+            combo_multiplier: 1,
+            max_combo: 0,
         }
     }
 }
@@ -172,6 +180,7 @@ pub struct GameTimers {
     pub player_shoot: Timer,
     pub wave_timer: Timer,
     pub boss_spawn_timer: Timer,
+    pub formation_timer: Timer,
 }
 
 impl Default for GameTimers {
@@ -181,13 +190,36 @@ impl Default for GameTimers {
             player_shoot: Timer::from_seconds(0.18, TimerMode::Repeating),
             wave_timer: Timer::from_seconds(16.0, TimerMode::Repeating),
             boss_spawn_timer: Timer::from_seconds(24.0, TimerMode::Repeating),
+            formation_timer: Timer::from_seconds(8.5, TimerMode::Repeating),
         }
     }
 }
 
 // ============================================================================
-// Componentes
+// Componentes y Recursos de Juego
 // ============================================================================
+
+#[derive(Component)]
+pub struct MainCamera;
+
+#[derive(Resource, Default)]
+pub struct ScreenShake {
+    pub timer: f32,
+    pub intensity: f32,
+}
+
+#[derive(Component)]
+pub struct ThrusterParticle {
+    pub velocity: Vec2,
+    pub lifetime: Timer,
+    pub initial_size: f32,
+}
+
+#[derive(Component)]
+pub struct FloatingText {
+    pub timer: Timer,
+    pub velocity: Vec2,
+}
 
 #[derive(Component)]
 pub struct BackgroundMusic;
@@ -275,6 +307,7 @@ pub fn run() {
         .init_resource::<Leaderboard>()
         .init_resource::<CurrentPlayer>()
         .init_resource::<GameTimers>()
+        .init_resource::<ScreenShake>()
         .insert_resource(ClearColor(Color::srgb(0.0, 0.0, 0.0)))
         .add_systems(Startup, setup_app)
         .add_systems(Update, ui_name_input.run_if(in_state(AppState::NameInput)))
@@ -285,6 +318,10 @@ pub fn run() {
             (
                 player_input_system,
                 player_shoot_system,
+                thruster_particle_system,
+                camera_shake_system,
+                floating_text_system,
+                combo_system,
                 laser_movement_system,
                 enemy_laser_system,
                 enemy_spawn_system,
@@ -315,7 +352,7 @@ fn setup_app(
         egui_settings.scale_factor = 1.0;
     }
 
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2dBundle::default(), MainCamera));
 
     let player_ship = asset_server.load("textures/player/ship.png");
     let shield_dome = asset_server.load("textures/effects/shield_dome.png");
@@ -422,17 +459,22 @@ fn setup_playing(
     current_player.status_message = "MISION INICIADA".to_string();
     current_player.status_timer = 2.5;
     current_player.invulnerable_timer = 0.0;
+    current_player.combo_count = 0;
+    current_player.combo_timer = 0.0;
+    current_player.combo_multiplier = 1;
+    current_player.max_combo = 0;
 
     timers.enemy_spawn.reset();
     timers.player_shoot.reset();
     timers.wave_timer.reset();
     timers.boss_spawn_timer.reset();
+    timers.formation_timer.reset();
 
-    // Música de combate espacial en bucle continuo
+    // Música de combate espacial en bucle continuo (volumen protagónico)
     commands.spawn((
         AudioBundle {
             source: assets.bgm_space.clone(),
-            settings: PlaybackSettings::LOOP.with_volume(bevy::audio::Volume::new(0.38)),
+            settings: PlaybackSettings::LOOP.with_volume(bevy::audio::Volume::new(0.82)),
         },
         BackgroundMusic,
     ));
@@ -502,7 +544,13 @@ fn cleanup_playing(
     query_powerups: Query<Entity, With<PowerUpItem>>,
     query_planets: Query<Entity, With<BackgroundPlanet>>,
     query_bgm: Query<Entity, With<BackgroundMusic>>,
+    query_thrusters: Query<Entity, With<ThrusterParticle>>,
+    query_floating: Query<Entity, With<FloatingText>>,
+    mut screen_shake: ResMut<ScreenShake>,
 ) {
+    screen_shake.timer = 0.0;
+    screen_shake.intensity = 0.0;
+
     for e in query_player.iter() {
         commands.entity(e).despawn_recursive();
     }
@@ -519,6 +567,12 @@ fn cleanup_playing(
         commands.entity(e).despawn_recursive();
     }
     for e in query_particles.iter() {
+        commands.entity(e).despawn_recursive();
+    }
+    for e in query_thrusters.iter() {
+        commands.entity(e).despawn_recursive();
+    }
+    for e in query_floating.iter() {
         commands.entity(e).despawn_recursive();
     }
     for e in query_powerups.iter() {
@@ -634,7 +688,7 @@ fn player_shoot_system(
 
     if timers.player_shoot.just_finished() {
         if let Ok(player_tr) = query.get_single() {
-            play_sound(&mut commands, assets.snd_player_laser.clone(), 0.22);
+            play_sound(&mut commands, assets.snd_player_laser.clone(), 0.14);
             let pos = player_tr.translation;
 
             if current_player.triple_shot_timer > 0.0 {
@@ -760,6 +814,85 @@ fn enemy_spawn_system(
                 dir_x: if rng.gen_bool(0.5) { 1.0 } else { -1.0 },
             },
         ));
+    }
+
+    // Oleadas de Formaciones Tácticas (Torneo Arcade)
+    timers.formation_timer.tick(time.delta());
+    if timers.formation_timer.just_finished() && !assets.regular_enemies.is_empty() {
+        let mut rng = rand::thread_rng();
+        let speed_factor = 1.0 + (current_player.time_elapsed * 0.007).min(1.8);
+        let base_speed = 135.0 * speed_factor;
+        let health = 30.0 + (current_player.wave as f32 * 12.0);
+        let size = 66.0;
+
+        if rng.gen_bool(0.5) {
+            // Formación en V (5 naves en punta de flecha sincronizadas)
+            let v_offsets = [
+                (0.0, 430.0),
+                (-55.0, 465.0),
+                (55.0, 465.0),
+                (-110.0, 500.0),
+                (110.0, 500.0),
+            ];
+            for (ox, oy) in v_offsets {
+                let enemy_idx = rng.gen_range(0..assets.regular_enemies.len());
+                let texture = assets.regular_enemies[enemy_idx].clone();
+                commands.spawn((
+                    SpriteBundle {
+                        texture,
+                        sprite: Sprite {
+                            custom_size: Some(Vec2::splat(size)),
+                            ..default()
+                        },
+                        transform: Transform::from_xyz(ox, oy, 5.0),
+                        ..default()
+                    },
+                    Enemy {
+                        health,
+                        max_health: health,
+                        speed: base_speed,
+                        score_value: 120,
+                        size,
+                        is_boss: false,
+                        shoot_timer: 4.0,
+                        dir_x: 0.0,
+                    },
+                ));
+            }
+        } else {
+            // Incursión de Ataque en Pinza (flancos izquierdo y derecho simultáneos)
+            let pincer_offsets = [
+                (-210.0, 430.0),
+                (-210.0, 480.0),
+                (210.0, 430.0),
+                (210.0, 480.0),
+            ];
+            for (ox, oy) in pincer_offsets {
+                let enemy_idx = rng.gen_range(0..assets.regular_enemies.len());
+                let texture = assets.regular_enemies[enemy_idx].clone();
+                commands.spawn((
+                    SpriteBundle {
+                        texture,
+                        sprite: Sprite {
+                            custom_size: Some(Vec2::splat(size)),
+                            ..default()
+                        },
+                        transform: Transform::from_xyz(ox, oy, 5.0),
+                        ..default()
+                    },
+                    Enemy {
+                        health,
+                        max_health: health,
+                        speed: base_speed * 1.15,
+                        score_value: 130,
+                        size,
+                        is_boss: false,
+                        shoot_timer: 3.5,
+                        dir_x: if ox < 0.0 { 0.3 } else { -0.3 },
+                    },
+                ));
+            }
+        }
     }
 }
 
@@ -932,6 +1065,7 @@ fn powerup_system(
     time: Res<Time>,
     assets: Res<GameAssets>,
     mut current_player: ResMut<CurrentPlayer>,
+    mut screen_shake: ResMut<ScreenShake>,
     mut query_powerups: Query<(Entity, &mut Transform, &PowerUpItem)>,
     query_player: Query<&Transform, (With<Player>, Without<PowerUpItem>, Without<Enemy>)>,
     mut query_enemies: Query<(Entity, &mut Enemy, &Transform), (Without<Player>, Without<PowerUpItem>)>,
@@ -963,9 +1097,12 @@ fn powerup_system(
                     }
                     PowerUpType::Health => {
                         current_player.health = (current_player.health + 40.0).min(current_player.max_health);
-                        current_player.status_message = "CASCO REPARADO +40".to_string();
+                        current_player.status_message = "MEMORIA REPARADA (SAFETY: 100%)".to_string();
                     }
                     PowerUpType::Nuke => {
+                        screen_shake.timer = 0.32;
+                        screen_shake.intensity = 8.5;
+
                         // 1. Limpiar todos los lásers enemigos de la pantalla
                         for laser_e in query_enemy_lasers.iter() {
                             commands.entity(laser_e).despawn();
@@ -980,18 +1117,20 @@ fn powerup_system(
                                 enemy.health -= 150.0;
                                 spawn_bevy_explosion(&mut commands, e_pos);
                                 if enemy.health <= 0.0 {
-                                    play_sound(&mut commands, assets.snd_boss_death.clone(), 0.90);
+                                    play_sound(&mut commands, assets.snd_boss_death.clone(), 0.70);
                                     current_player.score += 1500;
                                     current_player.enemies_killed += 1;
-                                    current_player.status_message = "JEFE ANIQUILADO CON EMP (+1500 PTS)".to_string();
+                                    current_player.status_message = "BORROW CHECKER SUPERADO (+1500 PTS)".to_string();
+                                    spawn_floating_text(&mut commands, e_pos, "+1500 BORROW CHECKER", Color::srgb(1.0, 0.85, 0.2));
                                     commands.entity(enemy_e).despawn();
                                 } else {
-                                    play_sound(&mut commands, assets.snd_enemy_death.clone(), 0.70);
+                                    play_sound(&mut commands, assets.snd_enemy_death.clone(), 0.40);
                                     current_player.status_message = "EMP IMPACTO AL JEFE (-150 HP)".to_string();
+                                    spawn_floating_text(&mut commands, e_pos, "-150 EMP", Color::srgb(0.4, 0.95, 1.0));
                                 }
                             } else {
                                 spawn_bevy_explosion(&mut commands, e_pos);
-                                play_sound(&mut commands, assets.snd_enemy_death.clone(), 0.45);
+                                play_sound(&mut commands, assets.snd_enemy_death.clone(), 0.28);
                                 current_player.score += 75;
                                 current_player.enemies_killed += 1;
                                 commands.entity(enemy_e).despawn();
@@ -1001,11 +1140,11 @@ fn powerup_system(
                         spawn_bevy_explosion(&mut commands, Vec2::ZERO);
                         if !hit_boss {
                             current_player.score += 300;
-                            current_player.status_message = "BOMBA EMP DETONADA".to_string();
+                            current_player.status_message = "CARGO CLEAN: BOMBA EMP DETONADA".to_string();
                         }
                     }
                 }
-                play_sound(&mut commands, assets.snd_powerup_pickup.clone(), 0.75);
+                play_sound(&mut commands, assets.snd_powerup_pickup.clone(), 0.48);
                 current_player.status_timer = 2.5;
                 spawn_spark(&mut commands, item_pos);
                 commands.entity(p_entity).despawn();
@@ -1059,7 +1198,10 @@ fn apply_damage_to_player(
         return;
     }
     current_player.invulnerable_timer = 0.35; // 350ms de gracia tras recibir impacto
-    play_sound(commands, assets.snd_player_damage.clone(), 0.65);
+    current_player.combo_count = 0;
+    current_player.combo_multiplier = 1;
+
+    play_sound(commands, assets.snd_player_damage.clone(), 0.40);
     if current_player.shield > 0.0 {
         current_player.shield_hit_timer = 0.28;
         if current_player.shield >= damage {
@@ -1080,6 +1222,7 @@ fn collision_system(
     mut commands: Commands,
     assets: Res<GameAssets>,
     mut current_player: ResMut<CurrentPlayer>,
+    mut screen_shake: ResMut<ScreenShake>,
     mut next_state: ResMut<NextState<AppState>>,
     mut leaderboard: ResMut<Leaderboard>,
     mut query_enemies: Query<(Entity, &Transform, &mut Enemy)>,
@@ -1102,8 +1245,40 @@ fn collision_system(
                 enemy.health -= 35.0;
 
                 if enemy.health <= 0.0 {
-                    current_player.score += enemy.score_value;
+                    // Sistema de Combos
+                    current_player.combo_count += 1;
+                    current_player.combo_timer = 2.4;
+                    current_player.combo_multiplier = match current_player.combo_count {
+                        0..=2 => 1,
+                        3..=5 => 2,
+                        6..=9 => 3,
+                        10..=14 => 4,
+                        _ => 5,
+                    };
+                    if current_player.combo_count > current_player.max_combo {
+                        current_player.max_combo = current_player.combo_count;
+                    }
+
+                    let pts = enemy.score_value * current_player.combo_multiplier;
+                    current_player.score += pts;
                     current_player.enemies_killed += 1;
+
+                    // Textos Flotantes de Puntuación
+                    if current_player.combo_multiplier > 1 {
+                        spawn_floating_text(
+                            &mut commands,
+                            e_pos,
+                            &format!("+{} x{}", pts, current_player.combo_multiplier),
+                            Color::srgb(1.0, 0.85, 0.2),
+                        );
+                    } else {
+                        spawn_floating_text(
+                            &mut commands,
+                            e_pos,
+                            &format!("+{}", pts),
+                            Color::srgb(0.35, 0.95, 1.0),
+                        );
+                    }
 
                     // Explosión de partículas Bevy
                     spawn_bevy_explosion(&mut commands, e_pos);
@@ -1121,11 +1296,19 @@ fn collision_system(
                     }
 
                     if enemy.is_boss {
-                        play_sound(&mut commands, assets.snd_boss_death.clone(), 0.90);
-                        current_player.status_message = "JEFE DERROTADO (+1500 PTS)".to_string();
+                        screen_shake.timer = 0.35;
+                        screen_shake.intensity = 9.5;
+                        play_sound(&mut commands, assets.snd_boss_death.clone(), 0.70);
+                        current_player.status_message = "BORROW CHECKER SUPERADO (+1500 PTS)".to_string();
                         current_player.status_timer = 3.0;
+                        spawn_floating_text(
+                            &mut commands,
+                            e_pos,
+                            "+1500 BORROW CHECKER",
+                            Color::srgb(1.0, 0.65, 0.1),
+                        );
                     } else {
-                        play_sound(&mut commands, assets.snd_enemy_death.clone(), 0.55);
+                        play_sound(&mut commands, assets.snd_enemy_death.clone(), 0.28);
                     }
 
                     commands.entity(enemy_entity).despawn();
@@ -1167,7 +1350,7 @@ fn collision_system(
     // Comprobar Game Over
     if current_player.health <= 0.0 {
         current_player.health = 0.0;
-        play_sound(&mut commands, assets.snd_player_death.clone(), 0.90);
+        play_sound(&mut commands, assets.snd_player_death.clone(), 0.85);
         leaderboard.add_score(
             current_player.name.clone(),
             current_player.score,
@@ -1258,6 +1441,141 @@ fn particle_system(
 
         if particle.lifetime.finished() {
             commands.entity(entity).despawn();
+        }
+    }
+}
+
+fn spawn_floating_text(commands: &mut Commands, pos: Vec2, text: &str, color: Color) {
+    commands.spawn((
+        Text2dBundle {
+            text: Text::from_section(
+                text,
+                TextStyle {
+                    font_size: 20.0,
+                    color,
+                    ..default()
+                },
+            ),
+            transform: Transform::from_xyz(pos.x, pos.y + 12.0, 25.0),
+            ..default()
+        },
+        FloatingText {
+            timer: Timer::from_seconds(0.65, TimerMode::Once),
+            velocity: Vec2::new(0.0, 70.0),
+        },
+    ));
+}
+
+fn floating_text_system(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut Transform, &mut Text, &mut FloatingText)>,
+) {
+    let dt = time.delta_seconds();
+    for (entity, mut transform, mut text, mut floating) in query.iter_mut() {
+        floating.timer.tick(time.delta());
+        transform.translation.y += floating.velocity.y * dt;
+
+        let alpha = 1.0 - floating.timer.fraction();
+        for section in text.sections.iter_mut() {
+            let [r, g, b, _] = section.style.color.to_srgba().to_f32_array();
+            section.style.color = Color::srgba(r, g, b, alpha);
+        }
+
+        if floating.timer.finished() {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+fn thruster_particle_system(
+    mut commands: Commands,
+    time: Res<Time>,
+    query_player: Query<&Transform, With<Player>>,
+    mut query_thrusters: Query<(Entity, &mut Transform, &mut Sprite, &mut ThrusterParticle), Without<Player>>,
+) {
+    let dt = time.delta_seconds();
+    let mut rng = rand::thread_rng();
+
+    if let Ok(p_tr) = query_player.get_single() {
+        let p_pos = p_tr.translation;
+        for _ in 0..2 {
+            let color = if rng.gen_bool(0.65) {
+                Color::srgba(0.2, 0.85, 1.0, 0.9) // Plasma azul cian
+            } else {
+                Color::srgba(1.0, 0.60, 0.15, 0.9) // Fuego naranja
+            };
+            let size = rng.gen_range(3.5..6.0);
+            let speed = rng.gen_range(160.0..280.0);
+            let angle_offset = rng.gen_range(-0.35..0.35);
+
+            commands.spawn((
+                SpriteBundle {
+                    sprite: Sprite {
+                        color,
+                        custom_size: Some(Vec2::splat(size)),
+                        ..default()
+                    },
+                    transform: Transform::from_xyz(
+                        p_pos.x + rng.gen_range(-14.0..14.0),
+                        p_pos.y - 36.0,
+                        8.0,
+                    ),
+                    ..default()
+                },
+                ThrusterParticle {
+                    velocity: Vec2::new(angle_offset * 120.0, -speed),
+                    lifetime: Timer::from_seconds(rng.gen_range(0.18..0.30), TimerMode::Once),
+                    initial_size: size,
+                },
+            ));
+        }
+    }
+
+    for (entity, mut transform, mut sprite, mut particle) in query_thrusters.iter_mut() {
+        particle.lifetime.tick(time.delta());
+        let progress = particle.lifetime.fraction();
+        transform.translation.x += particle.velocity.x * dt;
+        transform.translation.y += particle.velocity.y * dt;
+
+        let scale = 1.0 - progress;
+        sprite.custom_size = Some(Vec2::splat(particle.initial_size * scale));
+
+        if particle.lifetime.finished() {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+fn camera_shake_system(
+    time: Res<Time>,
+    mut shake: ResMut<ScreenShake>,
+    mut query_cam: Query<&mut Transform, With<MainCamera>>,
+) {
+    let dt = time.delta_seconds();
+    if let Ok(mut cam_tr) = query_cam.get_single_mut() {
+        if shake.timer > 0.0 {
+            shake.timer -= dt;
+            let mut rng = rand::thread_rng();
+            let factor = (shake.timer / 0.35).clamp(0.0, 1.0);
+            let ox = rng.gen_range(-shake.intensity..shake.intensity) * factor;
+            let oy = rng.gen_range(-shake.intensity..shake.intensity) * factor;
+            cam_tr.translation.x = ox;
+            cam_tr.translation.y = oy;
+        } else {
+            cam_tr.translation.x = 0.0;
+            cam_tr.translation.y = 0.0;
+        }
+    }
+}
+
+fn combo_system(time: Res<Time>, mut current_player: ResMut<CurrentPlayer>) {
+    let dt = time.delta_seconds();
+    if current_player.combo_timer > 0.0 {
+        current_player.combo_timer -= dt;
+        if current_player.combo_timer <= 0.0 {
+            current_player.combo_count = 0;
+            current_player.combo_multiplier = 1;
         }
     }
 }
@@ -1524,6 +1842,16 @@ fn ui_playing_hud(
 
                 ui.label(format!("OLA: {}", current_player.wave));
 
+                if current_player.combo_multiplier > 1 {
+                    ui.separator();
+                    ui.label(
+                        egui::RichText::new(format!("COMBO x{}", current_player.combo_multiplier))
+                            .color(egui::Color32::from_rgb(255, 215, 0))
+                            .strong()
+                            .size(15.0),
+                    );
+                }
+
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     // Barra de Vida
                     let health_frac = (current_player.health / current_player.max_health).clamp(0.0, 1.0);
@@ -1611,10 +1939,19 @@ fn ui_game_over(
                                 .color(egui::Color32::from_rgb(255, 60, 60))
                                 .strong(),
                         );
+                        ui.add_space(4.0);
+
+                        ui.label(
+                            egui::RichText::new("thread 'ferris_main' panicked at 'Hull integrity 0%: Explicit panic requested', src/pilot.rs:404")
+                                .size(10.5)
+                                .monospace()
+                                .color(egui::Color32::from_rgb(255, 120, 120)),
+                        );
+
                         ui.add_space(8.0);
 
                         ui.label(
-                            egui::RichText::new(format!("Buen intento, {}", current_player.name))
+                            egui::RichText::new(format!("Piloto: {}", current_player.name))
                                 .size(16.0)
                                 .color(egui::Color32::WHITE),
                         );
@@ -1626,7 +1963,46 @@ fn ui_game_over(
                                 .strong(),
                         );
 
-                        ui.label(format!("Sobreviviste: {:.0} segundos | Oleada: {}", current_player.time_elapsed, current_player.wave));
+                        ui.add_space(10.0);
+
+                        let (rank, rank_title, rank_color) = if current_player.score >= 3500 {
+                            ("RANGO S", "MAESTRO DE RUST / LEYENDA DEL VACIO", egui::Color32::from_rgb(255, 215, 0))
+                        } else if current_player.score >= 2000 {
+                            ("RANGO A", "OFICIAL SENIOR DE SISTEMAS", egui::Color32::from_rgb(100, 240, 255))
+                        } else if current_player.score >= 1000 {
+                            ("RANGO B", "PILOTO DE COMBATE CERTIFICADO", egui::Color32::from_rgb(120, 255, 120))
+                        } else {
+                            ("RANGO C", "CADETE EN PERIODO DE PRUEBAS", egui::Color32::from_rgb(200, 200, 200))
+                        };
+
+                        egui::Frame::default()
+                            .fill(egui::Color32::from_rgb(20, 16, 28))
+                            .stroke(egui::Stroke::new(1.5f32, rank_color))
+                            .rounding(8.0)
+                            .inner_margin(12.0)
+                            .show(ui, |ui| {
+                                ui.label(
+                                    egui::RichText::new(rank)
+                                        .size(20.0)
+                                        .color(rank_color)
+                                        .strong(),
+                                );
+                                ui.label(
+                                    egui::RichText::new(rank_title)
+                                        .size(11.0)
+                                        .color(egui::Color32::from_rgb(200, 200, 220)),
+                                );
+                                ui.add_space(6.0);
+                                ui.horizontal(|ui| {
+                                    ui.label(egui::RichText::new(format!("Enemigos: {}", current_player.enemies_killed)).size(12.0).color(egui::Color32::WHITE));
+                                    ui.label(egui::RichText::new("|").color(egui::Color32::GRAY));
+                                    ui.label(egui::RichText::new(format!("Max Combo: x{}", current_player.max_combo)).size(12.0).color(egui::Color32::from_rgb(255, 215, 0)).strong());
+                                    ui.label(egui::RichText::new("|").color(egui::Color32::GRAY));
+                                    ui.label(egui::RichText::new(format!("Tiempo: {:.0}s", current_player.time_elapsed)).size(12.0).color(egui::Color32::WHITE));
+                                    ui.label(egui::RichText::new("|").color(egui::Color32::GRAY));
+                                    ui.label(egui::RichText::new(format!("Oleada: {}", current_player.wave)).size(12.0).color(egui::Color32::WHITE));
+                                });
+                            });
 
                         ui.add_space(14.0);
 
