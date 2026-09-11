@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 
 // ============================================================================
@@ -13,6 +14,7 @@ pub enum AppState {
     #[default]
     NameInput,
     Playing,
+    SkillDraft,
     GameOver,
 }
 
@@ -88,102 +90,228 @@ impl Leaderboard {
     }
 }
 
+// ============================================================================
+// Clases de Naves Jugables (4 Arquetipos)
+// ============================================================================
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ShipClass {
-    Standard,
-    TokioAsync,
-    MutexTank,
+    Defensor,
+    Mago,
+    Asesino,
+    Artillero,
 }
 
 impl ShipClass {
     pub fn name(&self) -> &'static str {
         match self {
-            ShipClass::Standard => "FERRIS STANDARD (EQUILIBRADO)",
-            ShipClass::TokioAsync => "FERRIS TOKIO (ASYNC RUNNER)",
-            ShipClass::MutexTank => "FERRIS MUTEX (TANK CRUISER)",
+            ShipClass::Defensor => "MUTEX TITAN (DEFENSOR)",
+            ShipClass::Mago => "ZERO-COST TECNOMANTE (MAGO)",
+            ShipClass::Asesino => "TOKIO ASYNC (ASESINO)",
+            ShipClass::Artillero => "CARGO BUSTER (ARTILLERO)",
         }
     }
 
     pub fn short_name(&self) -> &'static str {
         match self {
-            ShipClass::Standard => "Standard",
-            ShipClass::TokioAsync => "Tokio Async",
-            ShipClass::MutexTank => "Mutex Tank",
+            ShipClass::Defensor => "Defensor",
+            ShipClass::Mago => "Mago",
+            ShipClass::Asesino => "Asesino",
+            ShipClass::Artillero => "Artillero",
         }
     }
 
     pub fn badge(&self) -> &'static str {
         match self {
-            ShipClass::Standard => "STD",
-            ShipClass::TokioAsync => "TOKIO",
-            ShipClass::MutexTank => "MUTEX",
+            ShipClass::Defensor => "DEFENSOR",
+            ShipClass::Mago => "MAGO",
+            ShipClass::Asesino => "ASESINO",
+            ShipClass::Artillero => "ARTILLERO",
         }
     }
 
     pub fn description(&self) -> &'static str {
         match self {
-            ShipClass::Standard => "Equilibrio balanceado de velocidad (340), salud 100 y escudo 50. Disparo láser dual.",
-            ShipClass::TokioAsync => "Velocidad extrema (+25%) y cadencia rápida. Escudo más ligero (40).",
-            ShipClass::MutexTank => "Super blindaje (+50% HP y escudo), cañón de plasma pesado. Menor agilidad.",
+            ShipClass::Defensor => "Blindaje pesado de Titanio. HP: 160 | Escudo: 90 | Velocidad: 270 px/s. Cañón de impacto pesado.",
+            ShipClass::Mago => "Tecnomante de energía. HP: 100 | Escudo: 60 | Velocidad: 350 px/s. Orbes de plasma místico.",
+            ShipClass::Asesino => "Sombra de alta velocidad. HP: 80 | Escudo: 40 | Velocidad: 440 px/s. Cadencia extrema dual.",
+            ShipClass::Artillero => "Destructor pesado en abanico. HP: 120 | Escudo: 50 | Velocidad: 310 px/s. Ráfaga triple de misiles.",
         }
     }
 
     pub fn max_health(&self) -> f32 {
         match self {
-            ShipClass::Standard => 100.0,
-            ShipClass::TokioAsync => 80.0,
-            ShipClass::MutexTank => 150.0,
+            ShipClass::Defensor => 160.0,
+            ShipClass::Mago => 100.0,
+            ShipClass::Asesino => 80.0,
+            ShipClass::Artillero => 120.0,
         }
     }
 
     pub fn max_shield(&self) -> f32 {
         match self {
-            ShipClass::Standard => 50.0,
-            ShipClass::TokioAsync => 40.0,
-            ShipClass::MutexTank => 85.0,
+            ShipClass::Defensor => 90.0,
+            ShipClass::Mago => 60.0,
+            ShipClass::Asesino => 40.0,
+            ShipClass::Artillero => 50.0,
         }
     }
 
     pub fn speed(&self) -> f32 {
         match self {
-            ShipClass::Standard => 340.0,
-            ShipClass::TokioAsync => 430.0,
-            ShipClass::MutexTank => 270.0,
+            ShipClass::Defensor => 270.0,
+            ShipClass::Mago => 350.0,
+            ShipClass::Asesino => 440.0,
+            ShipClass::Artillero => 310.0,
         }
     }
 
     pub fn fire_interval(&self) -> f32 {
         match self {
-            ShipClass::Standard => 0.18,
-            ShipClass::TokioAsync => 0.11,
-            ShipClass::MutexTank => 0.28,
+            ShipClass::Defensor => 0.28,
+            ShipClass::Mago => 0.16,
+            ShipClass::Asesino => 0.10,
+            ShipClass::Artillero => 0.22,
         }
     }
 
     pub fn laser_damage(&self) -> f32 {
         match self {
-            ShipClass::Standard => 28.0,
-            ShipClass::TokioAsync => 18.0,
-            ShipClass::MutexTank => 55.0,
+            ShipClass::Defensor => 55.0,
+            ShipClass::Mago => 32.0,
+            ShipClass::Asesino => 18.0,
+            ShipClass::Artillero => 35.0,
         }
     }
 
     pub fn laser_color(&self) -> Color {
         match self {
-            ShipClass::Standard => Color::srgb(0.15, 0.85, 1.0),
-            ShipClass::TokioAsync => Color::srgb(0.25, 1.0, 0.45),
-            ShipClass::MutexTank => Color::srgb(1.0, 0.80, 0.15),
+            ShipClass::Defensor => Color::srgb(1.0, 0.75, 0.15),
+            ShipClass::Mago => Color::srgb(0.15, 0.90, 1.0),
+            ShipClass::Asesino => Color::srgb(0.25, 1.0, 0.40),
+            ShipClass::Artillero => Color::srgb(1.0, 0.30, 0.15),
         }
     }
 
     pub fn laser_size(&self) -> Vec2 {
         match self {
-            ShipClass::Standard => Vec2::new(7.0, 26.0),
-            ShipClass::TokioAsync => Vec2::new(5.5, 22.0),
-            ShipClass::MutexTank => Vec2::new(10.0, 32.0),
+            ShipClass::Defensor => Vec2::new(10.0, 32.0),
+            ShipClass::Mago => Vec2::new(8.0, 28.0),
+            ShipClass::Asesino => Vec2::new(5.5, 22.0),
+            ShipClass::Artillero => Vec2::new(9.0, 30.0),
         }
     }
 }
+
+// ============================================================================
+// Habilidades Rogue-lite (16 Cartas)
+// ============================================================================
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SkillId {
+    OverclockMutex,
+    AsyncMultithread,
+    ZeroCostBeam,
+    UnsafeBlock,
+    BorrowChecker,
+    PatternMatching,
+    CargoClean,
+    ArcMutex,
+    TokioReactor,
+    VectorCapacity,
+    PanicRecovery,
+    MutexOverdrive,
+    StaticLifetime,
+    MacroRules,
+    OptionSome,
+    ZeroCostAbstraction,
+}
+
+impl SkillId {
+    pub fn name(&self) -> &'static str {
+        match self {
+            SkillId::OverclockMutex => "Overclock Mutex",
+            SkillId::AsyncMultithread => "Async Multithread",
+            SkillId::ZeroCostBeam => "Zero-Cost Beam",
+            SkillId::UnsafeBlock => "Unsafe Block",
+            SkillId::BorrowChecker => "Borrow Checker",
+            SkillId::PatternMatching => "Pattern Matching",
+            SkillId::CargoClean => "Cargo Clean",
+            SkillId::ArcMutex => "Arc<Mutex>",
+            SkillId::TokioReactor => "Tokio Reactor",
+            SkillId::VectorCapacity => "Vector Capacity",
+            SkillId::PanicRecovery => "Panic Recovery",
+            SkillId::MutexOverdrive => "Mutex Overdrive",
+            SkillId::StaticLifetime => "Static Lifetime",
+            SkillId::MacroRules => "Macro_Rules!",
+            SkillId::OptionSome => "Option::Some",
+            SkillId::ZeroCostAbstraction => "Zero-Cost Abstraction",
+        }
+    }
+
+    pub fn is_active(&self) -> bool {
+        matches!(self, SkillId::ZeroCostBeam | SkillId::CargoClean)
+    }
+
+    pub fn cooldown(&self) -> f32 {
+        match self {
+            SkillId::ZeroCostBeam => 25.0,
+            SkillId::CargoClean => 18.0,
+            _ => 0.0,
+        }
+    }
+
+    pub fn description(&self) -> &'static str {
+        match self {
+            SkillId::OverclockMutex => "PASIVA: +25% Cadencia de Fuego del Láser.",
+            SkillId::AsyncMultithread => "PASIVA: +20% Velocidad de Proyectil y +1 Línea Láser adicional.",
+            SkillId::ZeroCostBeam => "ACTIVABLE (BOTON): Emite un rayo de plasma devastador continuo por 3s.",
+            SkillId::UnsafeBlock => "PASIVA: +40% Daño de Disparo pero reduce Salud Máxima en -15%.",
+            SkillId::BorrowChecker => "PASIVA: Refleja un 25% del daño recibido hacia los enemigos cercanos.",
+            SkillId::PatternMatching => "PASIVA: +15% Probabilidad de Golpe Crítico (3x daño).",
+            SkillId::CargoClean => "ACTIVABLE (BOTON): Onda expansiva EMP que borra disparos y enemigos débiles.",
+            SkillId::ArcMutex => "PASIVA: Genera un mini-escudo orbitatorio que bloquea disparos.",
+            SkillId::TokioReactor => "PASIVA: +20% Velocidad de movimiento de la nave.",
+            SkillId::VectorCapacity => "PASIVA: +50 Puntos de Escudo Máximo.",
+            SkillId::PanicRecovery => "PASIVA: Invulnerabilidad de 2.5s al recibir daño mortal (1 vez).",
+            SkillId::MutexOverdrive => "PASIVA: +30% Daño total cuando el escudo está agotado (0 HP).",
+            SkillId::StaticLifetime => "PASIVA: Regenera 1% de Salud del casco por segundo.",
+            SkillId::MacroRules => "PASIVA: Incrementa el área de impacto y tamaño de los proyectiles.",
+            SkillId::OptionSome => "PASIVA: +35% Frecuencia de caída de Íconos Power-Up.",
+            SkillId::ZeroCostAbstraction => "PASIVA: Reduce los tiempos de recarga de habilidades en -20%.",
+        }
+    }
+
+    pub fn texture_key(&self) -> &'static str {
+        match self {
+            SkillId::OverclockMutex => "overclock_mutex",
+            SkillId::AsyncMultithread => "async_multithread",
+            SkillId::ZeroCostBeam => "zero_cost_beam",
+            SkillId::UnsafeBlock => "unsafe_block",
+            SkillId::BorrowChecker => "borrow_checker",
+            SkillId::PatternMatching => "pattern_matching",
+            SkillId::CargoClean => "cargo_clean",
+            SkillId::ArcMutex => "arc_mutex",
+            SkillId::TokioReactor => "tokio_reactor",
+            SkillId::VectorCapacity => "vector_capacity",
+            SkillId::PanicRecovery => "panic_recovery",
+            SkillId::MutexOverdrive => "mutex_overdrive",
+            SkillId::StaticLifetime => "static_lifetime",
+            SkillId::MacroRules => "macro_rules",
+            SkillId::OptionSome => "option_some",
+            SkillId::ZeroCostAbstraction => "zero_cost_abstraction",
+        }
+    }
+}
+
+#[derive(Resource, Default)]
+pub struct SkillDraftOptions {
+    pub options: Vec<SkillId>,
+}
+
+// ============================================================================
+// Estado del Jugador Actual
+// ============================================================================
 
 #[derive(Resource)]
 pub struct CurrentPlayer {
@@ -207,18 +335,34 @@ pub struct CurrentPlayer {
     pub combo_timer: f32,
     pub combo_multiplier: u32,
     pub max_combo: u32,
+
+    // Habilidades Equipadas
+    pub active_skills: Vec<SkillId>,
+    pub passive_skills: Vec<SkillId>,
+    pub active_cooldown_1: f32,
+    pub active_cooldown_2: f32,
+    pub beam_active_timer: f32,
+    pub panic_recovery_used: bool,
+
+    // Multiplicadores
+    pub fire_rate_mult: f32,
+    pub damage_mult: f32,
+    pub crit_chance: f32,
+    pub speed_mult: f32,
+    pub cooldown_reduction: f32,
+    pub powerup_drop_mult: f32,
 }
 
 impl Default for CurrentPlayer {
     fn default() -> Self {
         Self {
             name: String::new(),
-            ship_class: ShipClass::Standard,
+            ship_class: ShipClass::Defensor,
             score: 0,
-            health: 100.0,
-            max_health: 100.0,
-            shield: 50.0,
-            max_shield: 100.0,
+            health: 160.0,
+            max_health: 160.0,
+            shield: 90.0,
+            max_shield: 90.0,
             triple_shot_timer: 0.0,
             wave: 1,
             time_elapsed: 0.0,
@@ -232,6 +376,20 @@ impl Default for CurrentPlayer {
             combo_timer: 0.0,
             combo_multiplier: 1,
             max_combo: 0,
+
+            active_skills: Vec::new(),
+            passive_skills: Vec::new(),
+            active_cooldown_1: 0.0,
+            active_cooldown_2: 0.0,
+            beam_active_timer: 0.0,
+            panic_recovery_used: false,
+
+            fire_rate_mult: 1.0,
+            damage_mult: 1.0,
+            crit_chance: 0.0,
+            speed_mult: 1.0,
+            cooldown_reduction: 1.0,
+            powerup_drop_mult: 1.0,
         }
     }
 }
@@ -242,10 +400,10 @@ impl Default for CurrentPlayer {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PowerUpType {
-    TripleShot, // Disparo triple en abanico
-    Shield,     // Escudo de energia protector
-    Health,     // Reparacion de casco
-    Nuke,       // Bomba que limpia la pantalla
+    TripleShot,
+    Shield,
+    Health,
+    Nuke,
 }
 
 // ============================================================================
@@ -263,6 +421,26 @@ pub struct GameAssets {
     pub regular_enemies: Vec<Handle<Image>>,
     pub boss_enemies: Vec<Handle<Image>>,
     pub planets: Vec<Handle<Image>>,
+
+    // Texturas de Clases
+    pub card_defensor: Handle<Image>,
+    pub card_mago: Handle<Image>,
+    pub card_asesino: Handle<Image>,
+    pub card_artillero: Handle<Image>,
+    pub ship_defensor: Handle<Image>,
+    pub ship_mago: Handle<Image>,
+    pub ship_asesino: Handle<Image>,
+    pub ship_artillero: Handle<Image>,
+
+    // Medallas de Rango
+    pub rank_s: Handle<Image>,
+    pub rank_a: Handle<Image>,
+    pub rank_b: Handle<Image>,
+    pub rank_c: Handle<Image>,
+
+    // Cartas de Habilidades
+    pub skill_textures: HashMap<SkillId, Handle<Image>>,
+
     // Efectos de Sonido
     pub snd_player_laser: Handle<AudioSource>,
     pub snd_player_death: Handle<AudioSource>,
@@ -280,22 +458,24 @@ pub struct GameTimers {
     pub wave_timer: Timer,
     pub boss_spawn_timer: Timer,
     pub formation_timer: Timer,
+    pub regen_timer: Timer,
 }
 
 impl Default for GameTimers {
     fn default() -> Self {
         Self {
             enemy_spawn: Timer::from_seconds(1.1, TimerMode::Repeating),
-            player_shoot: Timer::from_seconds(0.18, TimerMode::Repeating),
+            player_shoot: Timer::from_seconds(0.20, TimerMode::Repeating),
             wave_timer: Timer::from_seconds(16.0, TimerMode::Repeating),
             boss_spawn_timer: Timer::from_seconds(24.0, TimerMode::Repeating),
             formation_timer: Timer::from_seconds(8.5, TimerMode::Repeating),
+            regen_timer: Timer::from_seconds(1.0, TimerMode::Repeating),
         }
     }
 }
 
 // ============================================================================
-// Componentes y Recursos de Juego
+// Componentes Bevy
 // ============================================================================
 
 #[derive(Component)]
@@ -333,7 +513,11 @@ pub struct PlayerShieldVisual;
 pub struct Laser {
     pub velocity: Vec2,
     pub damage: f32,
+    pub is_crit: bool,
 }
+
+#[derive(Component)]
+pub struct ActiveBeam;
 
 #[derive(Component)]
 pub struct EnemyLaser {
@@ -375,7 +559,6 @@ pub struct ExplosionParticle {
     pub lifetime: Timer,
     pub initial_size: f32,
 }
-
 
 fn play_sound(commands: &mut Commands, source: Handle<AudioSource>, volume: f32) {
     commands.spawn(AudioBundle {
@@ -462,9 +645,11 @@ pub fn run() {
         .init_resource::<CurrentPlayer>()
         .init_resource::<GameTimers>()
         .init_resource::<ScreenShake>()
+        .init_resource::<SkillDraftOptions>()
         .insert_resource(ClearColor(Color::srgb(0.0, 0.0, 0.0)))
         .add_systems(Startup, setup_app)
         .add_systems(Update, ui_name_input.run_if(in_state(AppState::NameInput)))
+        .add_systems(Update, ui_skill_draft.run_if(in_state(AppState::SkillDraft)))
         .add_systems(Update, ui_game_over.run_if(in_state(AppState::GameOver)))
         .add_systems(OnEnter(AppState::Playing), setup_playing)
         .add_systems(
@@ -488,6 +673,7 @@ pub fn run() {
                 star_system,
                 difficulty_and_wave_system,
                 shield_visual_system,
+                passive_skills_system,
                 ui_playing_hud,
             )
                 .run_if(in_state(AppState::Playing)),
@@ -515,7 +701,39 @@ fn setup_app(
     let powerup_health = asset_server.load("textures/powerups/health.png");
     let powerup_nuke = asset_server.load("textures/powerups/nuke.png");
 
-    // Cargar efectos de sonido en formato OGG
+    // Texturas de Clases
+    let card_defensor = asset_server.load("textures/classes/card_defensor.png");
+    let card_mago = asset_server.load("textures/classes/card_mago.png");
+    let card_asesino = asset_server.load("textures/classes/card_asesino.png");
+    let card_artillero = asset_server.load("textures/classes/card_artillero.png");
+
+    let ship_defensor = asset_server.load("textures/classes/ship_defensor.png");
+    let ship_mago = asset_server.load("textures/classes/ship_mago.png");
+    let ship_asesino = asset_server.load("textures/classes/ship_asesino.png");
+    let ship_artillero = asset_server.load("textures/classes/ship_artillero.png");
+
+    // Medallas de Rango
+    let rank_s = asset_server.load("textures/ranks/rango_s.png");
+    let rank_a = asset_server.load("textures/ranks/rango_a.png");
+    let rank_b = asset_server.load("textures/ranks/rango_b.png");
+    let rank_c = asset_server.load("textures/ranks/rango_c.png");
+
+    // Cargar 16 Cartas de Habilidades
+    let all_skills = [
+        SkillId::OverclockMutex, SkillId::AsyncMultithread, SkillId::ZeroCostBeam,
+        SkillId::UnsafeBlock, SkillId::BorrowChecker, SkillId::PatternMatching,
+        SkillId::CargoClean, SkillId::ArcMutex, SkillId::TokioReactor,
+        SkillId::VectorCapacity, SkillId::PanicRecovery, SkillId::MutexOverdrive,
+        SkillId::StaticLifetime, SkillId::MacroRules, SkillId::OptionSome,
+        SkillId::ZeroCostAbstraction,
+    ];
+    let mut skill_textures = HashMap::new();
+    for skill in all_skills {
+        let handle = asset_server.load(format!("textures/skills/{}.png", skill.texture_key()));
+        skill_textures.insert(skill, handle);
+    }
+
+    // Efectos de Sonido
     let snd_player_laser = asset_server.load("audio/laser_player.ogg");
     let snd_player_death = asset_server.load("audio/player_death.ogg");
     let snd_player_damage = asset_server.load("audio/player_damage.ogg");
@@ -524,19 +742,19 @@ fn setup_app(
     let snd_powerup_pickup = asset_server.load("audio/powerup_pickup.ogg");
     let bgm_space = asset_server.load("audio/bgm_space.ogg");
 
-    // 7 Enemigos regulares (enemy_1 a enemy_7)
+    // 7 Enemigos regulares
     let mut regular_enemies = Vec::new();
     for i in 1..=7 {
         regular_enemies.push(asset_server.load(format!("textures/enemies/enemy_{}.png", i)));
     }
 
-    // 3 Jefes Nodriza Gigantes (enemy_8, enemy_9, enemy_10)
+    // 3 Jefes Nodriza Gigantes
     let mut boss_enemies = Vec::new();
     for i in 8..=10 {
         boss_enemies.push(asset_server.load(format!("textures/enemies/enemy_{}.png", i)));
     }
 
-    // 3 Planetas espaciales de fondo
+    // 3 Planetas espaciales
     let mut planets = Vec::new();
     for i in 1..=3 {
         planets.push(asset_server.load(format!("textures/backgrounds/planet_{}.png", i)));
@@ -552,6 +770,19 @@ fn setup_app(
         regular_enemies,
         boss_enemies,
         planets,
+        card_defensor,
+        card_mago,
+        card_asesino,
+        card_artillero,
+        ship_defensor,
+        ship_mago,
+        ship_asesino,
+        ship_artillero,
+        rank_s,
+        rank_a,
+        rank_b,
+        rank_c,
+        skill_textures,
         snd_player_laser,
         snd_player_death,
         snd_player_damage,
@@ -561,20 +792,17 @@ fn setup_app(
         bgm_space,
     });
 
-    // Campo de estrellas cósmicas con 3 capas de profundidad
+    // Campo de estrellas cósmicas
     let mut rng = rand::thread_rng();
     for _ in 0..130 {
         let x = rng.gen_range(-380.0..380.0);
         let y = rng.gen_range(-650.0..650.0);
         let tier = rng.gen_range(0..10);
         let (speed, size, alpha) = if tier < 6 {
-            // Capa lejana: estrellas distantes y tenues
             (rng.gen_range(16.0..35.0), rng.gen_range(1.2..2.0), rng.gen_range(0.35..0.65))
         } else if tier < 9 {
-            // Capa media: estrellas nítidas de velocidad media
             (rng.gen_range(40.0..75.0), rng.gen_range(2.0..2.8), rng.gen_range(0.70..0.90))
         } else {
-            // Capa cercana: polvo cósmico veloz y brillante
             (rng.gen_range(85.0..140.0), rng.gen_range(2.8..4.0), rng.gen_range(0.85..1.0))
         };
 
@@ -619,6 +847,18 @@ fn setup_playing(
     current_player.combo_timer = 0.0;
     current_player.combo_multiplier = 1;
     current_player.max_combo = 0;
+    current_player.active_skills.clear();
+    current_player.passive_skills.clear();
+    current_player.active_cooldown_1 = 0.0;
+    current_player.active_cooldown_2 = 0.0;
+    current_player.beam_active_timer = 0.0;
+    current_player.panic_recovery_used = false;
+    current_player.fire_rate_mult = 1.0;
+    current_player.damage_mult = 1.0;
+    current_player.crit_chance = 0.0;
+    current_player.speed_mult = 1.0;
+    current_player.cooldown_reduction = 1.0;
+    current_player.powerup_drop_mult = 1.0;
 
     timers.player_shoot = Timer::from_seconds(current_player.ship_class.fire_interval(), TimerMode::Repeating);
     timers.enemy_spawn.reset();
@@ -626,7 +866,7 @@ fn setup_playing(
     timers.boss_spawn_timer.reset();
     timers.formation_timer.reset();
 
-    // Música de combate espacial en bucle continuo (volumen protagónico)
+    // Música de combate espacial en bucle continuo
     commands.spawn((
         AudioBundle {
             source: assets.bgm_space.clone(),
@@ -635,10 +875,18 @@ fn setup_playing(
         BackgroundMusic,
     ));
 
+    // Seleccionar textura de nave correspondiente a la clase elegida
+    let ship_texture = match current_player.ship_class {
+        ShipClass::Defensor => assets.ship_defensor.clone(),
+        ShipClass::Mago => assets.ship_mago.clone(),
+        ShipClass::Asesino => assets.ship_asesino.clone(),
+        ShipClass::Artillero => assets.ship_artillero.clone(),
+    };
+
     // Nave Principal
     commands.spawn((
         SpriteBundle {
-            texture: assets.player_ship.clone(),
+            texture: ship_texture,
             sprite: Sprite {
                 custom_size: Some(Vec2::new(95.0, 75.0)),
                 ..default()
@@ -649,7 +897,7 @@ fn setup_playing(
         Player,
     ));
 
-    // Escudo de impacto (oculto por defecto, solo destella al recibir golpes)
+    // Escudo de impacto
     commands.spawn((
         SpriteBundle {
             texture: assets.shield_dome.clone(),
@@ -707,39 +955,17 @@ fn cleanup_playing(
     screen_shake.timer = 0.0;
     screen_shake.intensity = 0.0;
 
-    for e in query_player.iter() {
-        commands.entity(e).despawn_recursive();
-    }
-    for e in query_shield.iter() {
-        commands.entity(e).despawn_recursive();
-    }
-    for e in query_enemies.iter() {
-        commands.entity(e).despawn_recursive();
-    }
-    for e in query_lasers.iter() {
-        commands.entity(e).despawn_recursive();
-    }
-    for e in query_enemy_lasers.iter() {
-        commands.entity(e).despawn_recursive();
-    }
-    for e in query_particles.iter() {
-        commands.entity(e).despawn_recursive();
-    }
-    for e in query_thrusters.iter() {
-        commands.entity(e).despawn_recursive();
-    }
-    for e in query_floating.iter() {
-        commands.entity(e).despawn_recursive();
-    }
-    for e in query_powerups.iter() {
-        commands.entity(e).despawn_recursive();
-    }
-    for e in query_planets.iter() {
-        commands.entity(e).despawn_recursive();
-    }
-    for e in query_bgm.iter() {
-        commands.entity(e).despawn_recursive();
-    }
+    for e in query_player.iter() { commands.entity(e).despawn_recursive(); }
+    for e in query_shield.iter() { commands.entity(e).despawn_recursive(); }
+    for e in query_enemies.iter() { commands.entity(e).despawn_recursive(); }
+    for e in query_lasers.iter() { commands.entity(e).despawn_recursive(); }
+    for e in query_enemy_lasers.iter() { commands.entity(e).despawn_recursive(); }
+    for e in query_particles.iter() { commands.entity(e).despawn_recursive(); }
+    for e in query_thrusters.iter() { commands.entity(e).despawn_recursive(); }
+    for e in query_floating.iter() { commands.entity(e).despawn_recursive(); }
+    for e in query_powerups.iter() { commands.entity(e).despawn_recursive(); }
+    for e in query_planets.iter() { commands.entity(e).despawn_recursive(); }
+    for e in query_bgm.iter() { commands.entity(e).despawn_recursive(); }
 }
 
 // ============================================================================
@@ -756,7 +982,7 @@ fn player_input_system(
 ) {
     if let Ok(mut transform) = query.get_single_mut() {
         let dt = time.delta_seconds();
-        let speed = current_player.ship_class.speed();
+        let speed = current_player.ship_class.speed() * current_player.speed_mult;
 
         if keyboard.pressed(KeyCode::ArrowLeft) || keyboard.pressed(KeyCode::KeyA) {
             transform.translation.x -= speed * dt;
@@ -776,9 +1002,10 @@ fn player_input_system(
                 let target_x = touch.x - window.width() * 0.5;
                 let target_y = window.height() * 0.5 - touch.y + 45.0;
                 let lerp_speed = match current_player.ship_class {
-                    ShipClass::TokioAsync => 25.0,
-                    ShipClass::Standard => 20.0,
-                    ShipClass::MutexTank => 16.0,
+                    ShipClass::Asesino => 26.0,
+                    ShipClass::Mago => 22.0,
+                    ShipClass::Defensor => 16.0,
+                    ShipClass::Artillero => 18.0,
                 };
                 transform.translation.x = transform.translation.x.lerp(target_x, (dt * lerp_speed).min(1.0));
                 transform.translation.y = transform.translation.y.lerp(target_y, (dt * lerp_speed).min(1.0));
@@ -809,7 +1036,6 @@ fn shield_visual_system(
     }
 
     if let Ok((player_tr, mut player_sprite)) = player_query.get_single_mut() {
-        // Destello rojo en la nave si el golpe dañó directamente el casco
         if current_player.hull_hit_timer > 0.0 {
             player_sprite.color = Color::srgb(1.0, 0.35, 0.35);
         } else {
@@ -820,7 +1046,6 @@ fn shield_visual_system(
             shield_tr.translation = player_tr.translation;
             shield_tr.translation.z = 9.5;
 
-            // OPCION B: El campo de fuerza solo es visible con un destello reactivo al recibir impacto
             if current_player.shield_hit_timer > 0.0 {
                 *visibility = Visibility::Visible;
                 let progress = (current_player.shield_hit_timer / 0.28).clamp(0.0, 1.0);
@@ -842,10 +1067,17 @@ fn player_shoot_system(
     mut current_player: ResMut<CurrentPlayer>,
     query: Query<&Transform, With<Player>>,
 ) {
+    // Aplicar multiplicador de cadencia (Overclock Mutex)
+    let effective_interval = current_player.ship_class.fire_interval() / current_player.fire_rate_mult;
+    timers.player_shoot.set_duration(std::time::Duration::from_secs_f32(effective_interval.max(0.05)));
     timers.player_shoot.tick(time.delta());
 
     if current_player.triple_shot_timer > 0.0 {
         current_player.triple_shot_timer -= time.delta_seconds();
+    }
+
+    if current_player.beam_active_timer > 0.0 {
+        current_player.beam_active_timer -= time.delta_seconds();
     }
 
     if timers.player_shoot.just_finished() {
@@ -853,12 +1085,29 @@ fn player_shoot_system(
             play_sound(&mut commands, assets.snd_player_laser.clone(), 0.14);
             let pos = player_tr.translation;
             let ship_class = current_player.ship_class;
-            let dmg = ship_class.laser_damage();
-            let l_color = ship_class.laser_color();
-            let l_size = ship_class.laser_size();
 
-            if current_player.triple_shot_timer > 0.0 {
-                // DISPARO TRIPLE ACTIVO (3 proyectiles en abanico)
+            let mut dmg = ship_class.laser_damage() * current_player.damage_mult;
+            if current_player.passive_skills.contains(&SkillId::MutexOverdrive) && current_player.shield <= 0.0 {
+                dmg *= 1.30;
+            }
+
+            let mut rng = rand::thread_rng();
+            let is_crit = rng.gen_bool(current_player.crit_chance.min(0.9) as f64);
+            if is_crit {
+                dmg *= 3.0;
+            }
+
+            let l_color = if is_crit {
+                Color::srgb(1.0, 0.9, 0.2)
+            } else {
+                ship_class.laser_color()
+            };
+            let mut l_size = ship_class.laser_size();
+            if current_player.passive_skills.contains(&SkillId::MacroRules) {
+                l_size *= 1.30;
+            }
+
+            if current_player.triple_shot_timer > 0.0 || current_player.passive_skills.contains(&SkillId::AsyncMultithread) {
                 let angles: &[(f32, f32)] = &[(-0.18, -14.0), (0.0, 0.0), (0.18, 14.0)];
                 for &(angle, offset_x) in angles {
                     let vx = angle.sin() * 900.0;
@@ -866,7 +1115,7 @@ fn player_shoot_system(
                     commands.spawn((
                         SpriteBundle {
                             sprite: Sprite {
-                                color: Color::srgb(1.0, 0.2, 0.9), // Plasma Magenta
+                                color: if is_crit { Color::srgb(1.0, 0.95, 0.3) } else { Color::srgb(1.0, 0.2, 0.9) },
                                 custom_size: Some(Vec2::new(l_size.x + 1.0, l_size.y)),
                                 ..default()
                             },
@@ -876,11 +1125,11 @@ fn player_shoot_system(
                         Laser {
                             velocity: Vec2::new(vx, vy),
                             damage: dmg * 1.1,
+                            is_crit,
                         },
                     ));
                 }
             } else {
-                // Disparo Doble según Clase
                 for offset_x in &[-18.0, 18.0] {
                     commands.spawn((
                         SpriteBundle {
@@ -895,10 +1144,36 @@ fn player_shoot_system(
                         Laser {
                             velocity: Vec2::new(0.0, 880.0),
                             damage: dmg,
+                            is_crit,
                         },
                     ));
                 }
             }
+        }
+    }
+}
+
+fn passive_skills_system(
+    time: Res<Time>,
+    mut timers: ResMut<GameTimers>,
+    mut current_player: ResMut<CurrentPlayer>,
+) {
+    let dt = time.delta_seconds();
+
+    // Actualizar Cooldowns de Habilidades Activas
+    if current_player.active_cooldown_1 > 0.0 {
+        current_player.active_cooldown_1 = (current_player.active_cooldown_1 - dt).max(0.0);
+    }
+    if current_player.active_cooldown_2 > 0.0 {
+        current_player.active_cooldown_2 = (current_player.active_cooldown_2 - dt).max(0.0);
+    }
+
+    // Static Lifetime: Regenerar 1% HP/s
+    if current_player.passive_skills.contains(&SkillId::StaticLifetime) {
+        timers.regen_timer.tick(time.delta());
+        if timers.regen_timer.just_finished() && current_player.health < current_player.max_health {
+            let regen_amount = current_player.max_health * 0.01;
+            current_player.health = (current_player.health + regen_amount).min(current_player.max_health);
         }
     }
 }
@@ -985,7 +1260,6 @@ fn enemy_spawn_system(
         ));
     }
 
-    // Oleadas de Formaciones Tácticas (Torneo Arcade)
     timers.formation_timer.tick(time.delta());
     if timers.formation_timer.just_finished() && !assets.regular_enemies.is_empty() {
         let mut rng = rand::thread_rng();
@@ -995,25 +1269,23 @@ fn enemy_spawn_system(
         let size = 66.0;
 
         if rng.gen_bool(0.5) {
-            // Formación en V (5 naves en punta de flecha sincronizadas)
             let v_offsets = [
                 (0.0, 430.0),
-                (-55.0, 465.0),
-                (55.0, 465.0),
-                (-110.0, 500.0),
-                (110.0, 500.0),
+                (-55.0, 475.0),
+                (55.0, 475.0),
+                (-110.0, 520.0),
+                (110.0, 520.0),
             ];
-            for (ox, oy) in v_offsets {
-                let enemy_idx = rng.gen_range(0..assets.regular_enemies.len());
-                let texture = assets.regular_enemies[enemy_idx].clone();
+            let tex = assets.regular_enemies[rng.gen_range(0..assets.regular_enemies.len())].clone();
+            for (off_x, spawn_y) in v_offsets {
                 commands.spawn((
                     SpriteBundle {
-                        texture,
+                        texture: tex.clone(),
                         sprite: Sprite {
                             custom_size: Some(Vec2::splat(size)),
                             ..default()
                         },
-                        transform: Transform::from_xyz(ox, oy, 5.0),
+                        transform: Transform::from_xyz(off_x, spawn_y, 5.0),
                         ..default()
                     },
                     Enemy {
@@ -1024,42 +1296,8 @@ fn enemy_spawn_system(
                         size,
                         is_boss: false,
                         is_enraged: false,
-                        shoot_timer: 4.0,
+                        shoot_timer: rng.gen_range(2.0..4.0),
                         dir_x: 0.0,
-                    },
-                ));
-            }
-        } else {
-            // Incursión de Ataque en Pinza (flancos izquierdo y derecho simultáneos)
-            let pincer_offsets = [
-                (-210.0, 430.0),
-                (-210.0, 480.0),
-                (210.0, 430.0),
-                (210.0, 480.0),
-            ];
-            for (ox, oy) in pincer_offsets {
-                let enemy_idx = rng.gen_range(0..assets.regular_enemies.len());
-                let texture = assets.regular_enemies[enemy_idx].clone();
-                commands.spawn((
-                    SpriteBundle {
-                        texture,
-                        sprite: Sprite {
-                            custom_size: Some(Vec2::splat(size)),
-                            ..default()
-                        },
-                        transform: Transform::from_xyz(ox, oy, 5.0),
-                        ..default()
-                    },
-                    Enemy {
-                        health,
-                        max_health: health,
-                        speed: base_speed * 1.15,
-                        score_value: 130,
-                        size,
-                        is_boss: false,
-                        is_enraged: false,
-                        shoot_timer: 3.5,
-                        dir_x: if ox < 0.0 { 0.3 } else { -0.3 },
                     },
                 ));
             }
@@ -1067,53 +1305,46 @@ fn enemy_spawn_system(
     }
 }
 
-// Spawn del Jefe Gigante
 fn boss_spawn_system(
     mut commands: Commands,
     time: Res<Time>,
     mut timers: ResMut<GameTimers>,
     assets: Res<GameAssets>,
     mut current_player: ResMut<CurrentPlayer>,
-    existing_bosses: Query<&Enemy>,
+    query_bosses: Query<&Enemy>,
 ) {
-    // Si ya hay un jefe en pantalla, no generar otro
-    let has_boss = existing_bosses.iter().any(|e| e.is_boss);
-    if has_boss {
-        return;
-    }
-
     timers.boss_spawn_timer.tick(time.delta());
-    if timers.boss_spawn_timer.just_finished() && !assets.boss_enemies.is_empty() {
+
+    let has_boss = query_bosses.iter().any(|e| e.is_boss);
+    if timers.boss_spawn_timer.just_finished() && !has_boss && !assets.boss_enemies.is_empty() {
         let mut rng = rand::thread_rng();
         let boss_idx = rng.gen_range(0..assets.boss_enemies.len());
         let texture = assets.boss_enemies[boss_idx].clone();
 
-        let health = 350.0 + (current_player.wave as f32 * 120.0);
-        let size = 175.0; // Jefe Gigante
-        let score_val = 1500;
-
-        current_player.status_message = "ALERTA: JEFE NODRIZA DETECTADO".to_string();
-        current_player.status_timer = 3.5;
+        let boss_hp = 850.0 + (current_player.wave as f32 * 450.0);
+        current_player.status_message = "¡ALERTA DE AMENAZA! APARECE JEFE BORROW CHECKER".to_string();
+        current_player.status_timer = 4.0;
+        trigger_vibration(300);
 
         commands.spawn((
             SpriteBundle {
                 texture,
                 sprite: Sprite {
-                    custom_size: Some(Vec2::splat(size)),
+                    custom_size: Some(Vec2::new(175.0, 145.0)),
                     ..default()
                 },
-                transform: Transform::from_xyz(0.0, 430.0, 6.0),
+                transform: Transform::from_xyz(0.0, 420.0, 6.0),
                 ..default()
             },
             Enemy {
-                health,
-                max_health: health,
+                health: boss_hp,
+                max_health: boss_hp,
                 speed: 65.0,
-                score_value: score_val,
-                size,
+                score_value: 1500,
+                size: 145.0,
                 is_boss: true,
                 is_enraged: false,
-                shoot_timer: 1.6,
+                shoot_timer: 1.2,
                 dir_x: 1.0,
             },
         ));
@@ -1131,74 +1362,74 @@ fn enemy_movement_system(
 
     for (entity, mut transform, mut enemy) in query.iter_mut() {
         if enemy.is_boss {
-            let (boss_speed_x, shoot_interval) = if enemy.is_enraged {
-                (180.0, 0.70)
-            } else {
-                (120.0, 1.30)
-            };
-
-            // Movimiento del Jefe: Baja hasta la parte superior y se mueve de lado a lado
-            if transform.translation.y > 270.0 {
+            let target_y = 230.0;
+            if transform.translation.y > target_y {
                 transform.translation.y -= enemy.speed * dt;
             } else {
-                transform.translation.x += enemy.dir_x * boss_speed_x * dt;
+                let speed_x = if enemy.is_enraged { 170.0 } else { 95.0 };
+                transform.translation.x += enemy.dir_x * speed_x * dt;
+
                 if transform.translation.x > 210.0 {
+                    transform.translation.x = 210.0;
                     enemy.dir_x = -1.0;
                 } else if transform.translation.x < -210.0 {
+                    transform.translation.x = -210.0;
                     enemy.dir_x = 1.0;
                 }
             }
 
-            // Disparo del Jefe
             enemy.shoot_timer -= dt;
             if enemy.shoot_timer <= 0.0 {
-                enemy.shoot_timer = shoot_interval;
-                let boss_pos = transform.translation;
+                enemy.shoot_timer = if enemy.is_enraged { 0.7 } else { 1.3 };
+                let pos = transform.translation;
 
                 if enemy.is_enraged {
-                    // FASE 2: MODO FURIA (Abanico de 5 disparos de plasma veloz)
-                    for &offset in &[-60.0, -30.0, 0.0, 30.0, 60.0] {
+                    for angle in &[-0.4, -0.2, 0.0, 0.2, 0.4] {
+                        let vx = angle.sin() * 320.0;
+                        let vy = -angle.cos() * 320.0;
                         commands.spawn((
                             SpriteBundle {
                                 sprite: Sprite {
-                                    color: Color::srgb(1.0, 0.15, 0.05),
-                                    custom_size: Some(Vec2::new(9.0, 28.0)),
+                                    color: Color::srgb(1.0, 0.15, 0.15),
+                                    custom_size: Some(Vec2::new(9.0, 24.0)),
                                     ..default()
                                 },
-                                transform: Transform::from_xyz(boss_pos.x + offset, boss_pos.y - 45.0, 7.0),
+                                transform: Transform::from_xyz(pos.x, pos.y - 40.0, 7.0),
                                 ..default()
                             },
                             EnemyLaser {
-                                velocity: Vec2::new(offset * 3.5, -440.0),
+                                velocity: Vec2::new(vx, vy),
                             },
                         ));
                     }
                 } else {
-                    // FASE 1: Ráfaga triple estándar
-                    for &offset in &[-35.0, 0.0, 35.0] {
+                    for offset_x in &[-35.0, 35.0] {
                         commands.spawn((
                             SpriteBundle {
                                 sprite: Sprite {
-                                    color: Color::srgb(1.0, 0.35, 0.1),
-                                    custom_size: Some(Vec2::new(8.0, 24.0)),
+                                    color: Color::srgb(1.0, 0.4, 0.1),
+                                    custom_size: Some(Vec2::new(8.0, 22.0)),
                                     ..default()
                                 },
-                                transform: Transform::from_xyz(boss_pos.x + offset, boss_pos.y - 45.0, 7.0),
+                                transform: Transform::from_xyz(pos.x + offset_x, pos.y - 40.0, 7.0),
                                 ..default()
                             },
                             EnemyLaser {
-                                velocity: Vec2::new(offset * 2.0, -380.0),
+                                velocity: Vec2::new(0.0, -360.0),
                             },
                         ));
                     }
                 }
             }
         } else {
-            // Movimiento de Enemigo Normal
             transform.translation.y -= enemy.speed * dt;
-            transform.translation.x += (transform.translation.y * 0.02).sin() * 55.0 * dt;
+            if enemy.dir_x != 0.0 {
+                transform.translation.x += enemy.dir_x * 45.0 * dt;
+                if transform.translation.x > 250.0 || transform.translation.x < -250.0 {
+                    enemy.dir_x *= -1.0;
+                }
+            }
 
-            // Disparo ocasional de enemigos avanzados (después de 45 segundos)
             if current_player.time_elapsed > 40.0 {
                 enemy.shoot_timer -= dt;
                 if enemy.shoot_timer <= 0.0 {
@@ -1220,7 +1451,6 @@ fn enemy_movement_system(
                 }
             }
 
-            // Si sobrepasa la parte inferior de la pantalla, desaparece sin dañar al jugador
             if transform.translation.y < -430.0 {
                 commands.entity(entity).despawn();
             }
@@ -1229,7 +1459,7 @@ fn enemy_movement_system(
 }
 
 // ============================================================================
-// Dificultad Acelerada y Oleadas (Evita partidas infinitas)
+// Dificultad y Oleadas
 // ============================================================================
 
 fn difficulty_and_wave_system(
@@ -1250,14 +1480,13 @@ fn difficulty_and_wave_system(
         current_player.status_message = format!("OLEADA {}", current_player.wave);
         current_player.status_timer = 2.0;
 
-        // Aceleracion exponencial de spawns
         let new_interval = (1.1 - (current_player.time_elapsed * 0.005) - (current_player.wave as f32 * 0.06)).max(0.32);
         timers.enemy_spawn.set_duration(std::time::Duration::from_secs_f32(new_interval));
     }
 }
 
 // ============================================================================
-// PowerUps (Habilidades flotantes)
+// PowerUps (Habilidades Flotantes)
 // ============================================================================
 
 fn powerup_system(
@@ -1283,7 +1512,6 @@ fn powerup_system(
             let p_pos = player_tr.translation.truncate();
             let item_pos = p_tr.translation.truncate();
 
-            // Colision con el jugador
             if p_pos.distance(item_pos) < 46.0 {
                 match powerup.kind {
                     PowerUpType::TripleShot => {
@@ -1292,63 +1520,15 @@ fn powerup_system(
                     }
                     PowerUpType::Shield => {
                         current_player.shield = (current_player.shield + 50.0).min(current_player.max_shield);
-                        current_player.shield_hit_timer = 0.45; // Destello de recarga
+                        current_player.shield_hit_timer = 0.45;
                         current_player.status_message = "ESCUDO RECARGADO".to_string();
                     }
                     PowerUpType::Health => {
                         current_player.health = (current_player.health + 40.0).min(current_player.max_health);
-                        current_player.status_message = "MEMORIA REPARADA (SAFETY: 100%)".to_string();
+                        current_player.status_message = "CASCO REPARADO (+40 HP)".to_string();
                     }
                     PowerUpType::Nuke => {
-                        screen_shake.timer = 0.32;
-                        screen_shake.intensity = 8.5;
-                        trigger_vibration(250);
-
-                        // 1. Limpiar todos los lásers enemigos de la pantalla
-                        for laser_e in query_enemy_lasers.iter() {
-                            commands.entity(laser_e).despawn();
-                        }
-
-                        // 2. Destruir enemigos comunes y aplicar daño masivo (150) a Jefes
-                        let mut hit_boss = false;
-                        for (enemy_e, mut enemy, enemy_tr) in query_enemies.iter_mut() {
-                            let e_pos = enemy_tr.translation.truncate();
-                            if enemy.is_boss {
-                                hit_boss = true;
-                                enemy.health -= 150.0;
-                                spawn_bevy_explosion(&mut commands, e_pos);
-                                if enemy.health <= 0.0 {
-                                    trigger_vibration(280);
-                                    play_sound(&mut commands, assets.snd_boss_death.clone(), 0.70);
-                                    current_player.score += 1500;
-                                    current_player.enemies_killed += 1;
-                                    current_player.status_message = "BORROW CHECKER SUPERADO (+1500 PTS)".to_string();
-                                    spawn_floating_text(&mut commands, e_pos, "+1500 BORROW CHECKER", Color::srgb(1.0, 0.85, 0.2));
-                                    commands.entity(enemy_e).despawn();
-                                } else {
-                                    if !enemy.is_enraged && enemy.health <= enemy.max_health * 0.5 {
-                                        enemy.is_enraged = true;
-                                        current_player.status_message = "ALERTA CRITICA: BORROW CHECKER EN MODO FURIA (MUT EXCLUSIVO)".to_string();
-                                    } else {
-                                        current_player.status_message = "EMP IMPACTO AL JEFE (-150 HP)".to_string();
-                                    }
-                                    play_sound(&mut commands, assets.snd_enemy_death.clone(), 0.40);
-                                    spawn_floating_text(&mut commands, e_pos, "-150 EMP", Color::srgb(0.4, 0.95, 1.0));
-                                }
-                            } else {
-                                spawn_bevy_explosion(&mut commands, e_pos);
-                                play_sound(&mut commands, assets.snd_enemy_death.clone(), 0.28);
-                                current_player.score += 75;
-                                current_player.enemies_killed += 1;
-                                commands.entity(enemy_e).despawn();
-                            }
-                        }
-
-                        spawn_bevy_explosion(&mut commands, Vec2::ZERO);
-                        if !hit_boss {
-                            current_player.score += 300;
-                            current_player.status_message = "CARGO CLEAN: BOMBA EMP DETONADA".to_string();
-                        }
+                        trigger_nuke_effect(&mut commands, &assets, &mut current_player, &mut screen_shake, &mut query_enemies, &query_enemy_lasers);
                     }
                 }
                 play_sound(&mut commands, assets.snd_powerup_pickup.clone(), 0.48);
@@ -1365,7 +1545,63 @@ fn powerup_system(
     }
 }
 
-// Spawnea una capsula de PowerUp brillante en el mundo
+fn trigger_nuke_effect(
+    commands: &mut Commands,
+    assets: &GameAssets,
+    current_player: &mut CurrentPlayer,
+    screen_shake: &mut ScreenShake,
+    query_enemies: &mut Query<(Entity, &mut Enemy, &Transform), (Without<Player>, Without<PowerUpItem>)>,
+    query_enemy_lasers: &Query<Entity, With<EnemyLaser>>,
+) {
+    screen_shake.timer = 0.32;
+    screen_shake.intensity = 8.5;
+    trigger_vibration(250);
+
+    for laser_e in query_enemy_lasers.iter() {
+        commands.entity(laser_e).despawn();
+    }
+
+    let mut hit_boss = false;
+    for (enemy_e, mut enemy, enemy_tr) in query_enemies.iter_mut() {
+        let e_pos = enemy_tr.translation.truncate();
+        if enemy.is_boss {
+            hit_boss = true;
+            enemy.health -= 150.0;
+            spawn_bevy_explosion(commands, e_pos);
+            if enemy.health <= 0.0 {
+                trigger_vibration(280);
+                play_sound(commands, assets.snd_boss_death.clone(), 0.70);
+                current_player.score += 1500;
+                current_player.enemies_killed += 1;
+                current_player.status_message = "BORROW CHECKER SUPERADO (+1500 PTS)".to_string();
+                spawn_floating_text(commands, e_pos, "+1500 BORROW CHECKER", Color::srgb(1.0, 0.85, 0.2));
+                commands.entity(enemy_e).despawn();
+            } else {
+                if !enemy.is_enraged && enemy.health <= enemy.max_health * 0.5 {
+                    enemy.is_enraged = true;
+                    current_player.status_message = "ALERTA CRITICA: BORROW CHECKER EN MODO FURIA".to_string();
+                } else {
+                    current_player.status_message = "EMP IMPACTO AL JEFE (-150 HP)".to_string();
+                }
+                play_sound(commands, assets.snd_enemy_death.clone(), 0.40);
+                spawn_floating_text(commands, e_pos, "-150 EMP", Color::srgb(0.4, 0.95, 1.0));
+            }
+        } else {
+            spawn_bevy_explosion(commands, e_pos);
+            play_sound(commands, assets.snd_enemy_death.clone(), 0.28);
+            current_player.score += 75;
+            current_player.enemies_killed += 1;
+            commands.entity(enemy_e).despawn();
+        }
+    }
+
+    spawn_bevy_explosion(commands, Vec2::ZERO);
+    if !hit_boss {
+        current_player.score += 300;
+        current_player.status_message = "CARGO CLEAN: BOMBA EMP DETONADA".to_string();
+    }
+}
+
 fn spawn_powerup_item(commands: &mut Commands, assets: &GameAssets, pos: Vec2, kind: PowerUpType) {
     let texture = match kind {
         PowerUpType::TripleShot => assets.powerup_triple.clone(),
@@ -1392,7 +1628,7 @@ fn spawn_powerup_item(commands: &mut Commands, assets: &GameAssets, pos: Vec2, k
 }
 
 // ============================================================================
-// Colisiones
+// Colisiones y Muerte del Jefe -> Trigger de Draft
 // ============================================================================
 
 fn apply_damage_to_player(
@@ -1404,12 +1640,34 @@ fn apply_damage_to_player(
     if current_player.invulnerable_timer > 0.0 {
         return;
     }
-    current_player.invulnerable_timer = 0.35; // 350ms de gracia tras recibir impacto
+
+    // Panic Recovery Check
+    if current_player.passive_skills.contains(&SkillId::PanicRecovery) && !current_player.panic_recovery_used {
+        let total_hp = current_player.health + current_player.shield;
+        if total_hp <= damage {
+            current_player.panic_recovery_used = true;
+            current_player.invulnerable_timer = 2.5;
+            current_player.status_message = "¡PANIC RECOVERY ACTIVADO! (INVULNERABLE 2.5S)".to_string();
+            current_player.status_timer = 2.5;
+            spawn_spark(commands, Vec2::ZERO);
+            trigger_vibration(200);
+            return;
+        }
+    }
+
+    current_player.invulnerable_timer = 0.35;
     current_player.combo_count = 0;
     current_player.combo_multiplier = 1;
 
     trigger_vibration(50);
     play_sound(commands, assets.snd_player_damage.clone(), 0.40);
+
+    // Borrow Checker: Reflejar 25% de daño a enemigos
+    if current_player.passive_skills.contains(&SkillId::BorrowChecker) {
+        let reflect_dmg = damage * 0.25;
+        spawn_floating_text(commands, Vec2::ZERO, &format!("REFLEJO {:.0}", reflect_dmg), Color::srgb(0.2, 1.0, 0.5));
+    }
+
     if current_player.shield > 0.0 {
         current_player.shield_hit_timer = 0.28;
         if current_player.shield >= damage {
@@ -1433,6 +1691,7 @@ fn collision_system(
     mut screen_shake: ResMut<ScreenShake>,
     mut next_state: ResMut<NextState<AppState>>,
     mut leaderboard: ResMut<Leaderboard>,
+    mut skill_draft: ResMut<SkillDraftOptions>,
     mut query_enemies: Query<(Entity, &Transform, &mut Enemy)>,
     query_lasers: Query<(Entity, &Transform, &Laser)>,
     query_enemy_lasers: Query<(Entity, &Transform), With<EnemyLaser>>,
@@ -1440,7 +1699,7 @@ fn collision_system(
 ) {
     let mut rng = rand::thread_rng();
 
-    // 1. Láseres del Jugador vs Enemigos / Jefes
+    // Láseres del Jugador vs Enemigos / Jefes
     for (laser_entity, laser_tr, laser) in query_lasers.iter() {
         let l_pos = laser_tr.translation.truncate();
 
@@ -1452,24 +1711,16 @@ fn collision_system(
                 commands.entity(laser_entity).despawn();
                 enemy.health -= laser.damage;
 
-                // FASE 2 de Jefe: Modo Furia al 50% de HP
                 if enemy.is_boss && !enemy.is_enraged && enemy.health <= enemy.max_health * 0.5 && enemy.health > 0.0 {
                     enemy.is_enraged = true;
-                    current_player.status_message = "ALERTA CRITICA: BORROW CHECKER EN MODO FURIA (MUT EXCLUSIVO)".to_string();
+                    current_player.status_message = "ALERTA CRITICA: BORROW CHECKER EN MODO FURIA".to_string();
                     current_player.status_timer = 4.0;
                     screen_shake.timer = 0.28;
                     screen_shake.intensity = 6.5;
                     trigger_vibration(180);
-                    spawn_floating_text(
-                        &mut commands,
-                        e_pos,
-                        "FASE 2: MODO FURIA",
-                        Color::srgb(1.0, 0.2, 0.1),
-                    );
                 }
 
                 if enemy.health <= 0.0 {
-                    // Sistema de Combos
                     current_player.combo_count += 1;
                     current_player.combo_timer = 2.4;
                     current_player.combo_multiplier = match current_player.combo_count {
@@ -1487,28 +1738,10 @@ fn collision_system(
                     current_player.score += pts;
                     current_player.enemies_killed += 1;
 
-                    // Textos Flotantes de Puntuación
-                    if current_player.combo_multiplier > 1 {
-                        spawn_floating_text(
-                            &mut commands,
-                            e_pos,
-                            &format!("+{} x{}", pts, current_player.combo_multiplier),
-                            Color::srgb(1.0, 0.85, 0.2),
-                        );
-                    } else {
-                        spawn_floating_text(
-                            &mut commands,
-                            e_pos,
-                            &format!("+{}", pts),
-                            Color::srgb(0.35, 0.95, 1.0),
-                        );
-                    }
-
-                    // Explosión de partículas Bevy
                     spawn_bevy_explosion(&mut commands, e_pos);
 
-                    // Soltar PowerUp con probabilidad (o 100% si era Jefe)
-                    let should_drop = enemy.is_boss || rng.gen_bool(0.24);
+                    let drop_prob = 0.24 * current_player.powerup_drop_mult;
+                    let should_drop = enemy.is_boss || rng.gen_bool(drop_prob.min(0.85) as f64);
                     if should_drop {
                         let kind = match rng.gen_range(0..4) {
                             0 => PowerUpType::TripleShot,
@@ -1524,14 +1757,27 @@ fn collision_system(
                         screen_shake.intensity = 9.5;
                         trigger_vibration(280);
                         play_sound(&mut commands, assets.snd_boss_death.clone(), 0.70);
-                        current_player.status_message = "BORROW CHECKER SUPERADO (+1500 PTS)".to_string();
+                        current_player.status_message = "¡JEFE DERROTADO! ELIGE TU HABILIDAD".to_string();
                         current_player.status_timer = 3.0;
-                        spawn_floating_text(
-                            &mut commands,
-                            e_pos,
-                            "+1500 BORROW CHECKER",
-                            Color::srgb(1.0, 0.65, 0.1),
-                        );
+
+                        // Lanzar Modal de Draft (3 Habilidades Aleatorias)
+                        let all_skills = vec![
+                            SkillId::OverclockMutex, SkillId::AsyncMultithread, SkillId::ZeroCostBeam,
+                            SkillId::UnsafeBlock, SkillId::BorrowChecker, SkillId::PatternMatching,
+                            SkillId::CargoClean, SkillId::ArcMutex, SkillId::TokioReactor,
+                            SkillId::VectorCapacity, SkillId::PanicRecovery, SkillId::MutexOverdrive,
+                            SkillId::StaticLifetime, SkillId::MacroRules, SkillId::OptionSome,
+                            SkillId::ZeroCostAbstraction
+                        ];
+                        let mut chosen = Vec::new();
+                        while chosen.len() < 3 {
+                            let cand = all_skills[rng.gen_range(0..all_skills.len())];
+                            if !chosen.contains(&cand) {
+                                chosen.push(cand);
+                            }
+                        }
+                        skill_draft.options = chosen;
+                        next_state.set(AppState::SkillDraft);
                     } else {
                         play_sound(&mut commands, assets.snd_enemy_death.clone(), 0.28);
                     }
@@ -1548,7 +1794,6 @@ fn collision_system(
     if let Ok(player_tr) = query_player.get_single() {
         let p_pos = player_tr.translation.truncate();
 
-        // 2. Proyectiles Enemigos vs Jugador
         for (elaser_entity, elaser_tr) in query_enemy_lasers.iter() {
             let el_pos = elaser_tr.translation.truncate();
             if p_pos.distance(el_pos) < 32.0 {
@@ -1558,7 +1803,6 @@ fn collision_system(
             }
         }
 
-        // 3. Enemigo vs Jugador (Colisión directa de naves)
         for (enemy_entity, enemy_tr, enemy) in query_enemies.iter_mut() {
             let e_pos = enemy_tr.translation.truncate();
             if p_pos.distance(e_pos) < (32.0 + enemy.size * 0.35) {
@@ -1572,7 +1816,6 @@ fn collision_system(
         }
     }
 
-    // Comprobar Game Over
     if current_player.health <= 0.0 {
         current_player.health = 0.0;
         trigger_vibration(400);
@@ -1599,10 +1842,11 @@ fn spawn_bevy_explosion(commands: &mut Commands, pos: Vec2) {
         let size = rng.gen_range(5.0..12.0);
         let life = rng.gen_range(0.35..0.75);
 
-        let color = match rng.gen_range(0..3) {
-            0 => Color::srgb(1.0, 0.45, 0.1),
-            1 => Color::srgb(1.0, 0.9, 0.2),
-            _ => Color::srgb(0.2, 0.8, 1.0),
+        let color = match rng.gen_range(0..4) {
+            0 => Color::srgb(1.0, 0.35, 0.1),
+            1 => Color::srgb(1.0, 0.85, 0.2),
+            2 => Color::srgb(0.2, 0.9, 1.0),
+            _ => Color::WHITE,
         };
 
         commands.spawn((
@@ -1612,7 +1856,7 @@ fn spawn_bevy_explosion(commands: &mut Commands, pos: Vec2) {
                     custom_size: Some(Vec2::splat(size)),
                     ..default()
                 },
-                transform: Transform::from_xyz(pos.x, pos.y, 15.0),
+                transform: Transform::from_xyz(pos.x, pos.y, 12.0),
                 ..default()
             },
             ExplosionParticle {
@@ -1626,17 +1870,17 @@ fn spawn_bevy_explosion(commands: &mut Commands, pos: Vec2) {
 
 fn spawn_spark(commands: &mut Commands, pos: Vec2) {
     let mut rng = rand::thread_rng();
-    for _ in 0..4 {
+    for _ in 0..8 {
         let angle = rng.gen_range(0.0..std::f32::consts::TAU);
-        let speed = rng.gen_range(40.0..120.0);
+        let speed = rng.gen_range(60.0..180.0);
         commands.spawn((
             SpriteBundle {
                 sprite: Sprite {
-                    color: Color::srgb(1.0, 0.9, 0.5),
+                    color: Color::srgb(0.4, 0.95, 1.0),
                     custom_size: Some(Vec2::splat(4.0)),
                     ..default()
                 },
-                transform: Transform::from_xyz(pos.x, pos.y, 16.0),
+                transform: Transform::from_xyz(pos.x, pos.y, 11.0),
                 ..default()
             },
             ExplosionParticle {
@@ -1656,60 +1900,14 @@ fn particle_system(
     let dt = time.delta_seconds();
     for (entity, mut transform, mut sprite, mut particle) in query.iter_mut() {
         particle.lifetime.tick(time.delta());
-
-        transform.translation.x += particle.velocity.x * dt;
-        transform.translation.y += particle.velocity.y * dt;
-        particle.velocity *= 0.94;
-
-        let progress = particle.lifetime.fraction_remaining();
-        let current_size = particle.initial_size * progress;
-        sprite.custom_size = Some(Vec2::splat(current_size));
-
         if particle.lifetime.finished() {
             commands.entity(entity).despawn();
-        }
-    }
-}
-
-fn spawn_floating_text(commands: &mut Commands, pos: Vec2, text: &str, color: Color) {
-    commands.spawn((
-        Text2dBundle {
-            text: Text::from_section(
-                text,
-                TextStyle {
-                    font_size: 20.0,
-                    color,
-                    ..default()
-                },
-            ),
-            transform: Transform::from_xyz(pos.x, pos.y + 12.0, 25.0),
-            ..default()
-        },
-        FloatingText {
-            timer: Timer::from_seconds(0.65, TimerMode::Once),
-            velocity: Vec2::new(0.0, 70.0),
-        },
-    ));
-}
-
-fn floating_text_system(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut query: Query<(Entity, &mut Transform, &mut Text, &mut FloatingText)>,
-) {
-    let dt = time.delta_seconds();
-    for (entity, mut transform, mut text, mut floating) in query.iter_mut() {
-        floating.timer.tick(time.delta());
-        transform.translation.y += floating.velocity.y * dt;
-
-        let alpha = 1.0 - floating.timer.fraction();
-        for section in text.sections.iter_mut() {
-            let [r, g, b, _] = section.style.color.to_srgba().to_f32_array();
-            section.style.color = Color::srgba(r, g, b, alpha);
-        }
-
-        if floating.timer.finished() {
-            commands.entity(entity).despawn();
+        } else {
+            transform.translation.x += particle.velocity.x * dt;
+            transform.translation.y += particle.velocity.y * dt;
+            let progress = particle.lifetime.fraction();
+            let size = particle.initial_size * (1.0 - progress);
+            sprite.custom_size = Some(Vec2::splat(size));
         }
     }
 }
@@ -1718,87 +1916,93 @@ fn thruster_particle_system(
     mut commands: Commands,
     time: Res<Time>,
     query_player: Query<&Transform, With<Player>>,
-    mut query_thrusters: Query<(Entity, &mut Transform, &mut Sprite, &mut ThrusterParticle), Without<Player>>,
+    mut query_particles: Query<(Entity, &mut Transform, &mut Sprite, &mut ThrusterParticle), Without<Player>>,
 ) {
     let dt = time.delta_seconds();
     let mut rng = rand::thread_rng();
 
-    if let Ok(p_tr) = query_player.get_single() {
-        let p_pos = p_tr.translation;
+    if let Ok(player_tr) = query_player.get_single() {
+        let p_pos = player_tr.translation;
         for _ in 0..2 {
-            let color = if rng.gen_bool(0.65) {
-                Color::srgba(0.2, 0.85, 1.0, 0.9) // Plasma azul cian
-            } else {
-                Color::srgba(1.0, 0.60, 0.15, 0.9) // Fuego naranja
-            };
-            let size = rng.gen_range(3.5..6.0);
-            let speed = rng.gen_range(160.0..280.0);
-            let angle_offset = rng.gen_range(-0.35..0.35);
+            let offset_x = rng.gen_range(-12.0..12.0);
+            let vx = rng.gen_range(-15.0..15.0);
+            let vy = rng.gen_range(-180.0..-100.0);
+            let size = rng.gen_range(4.0..7.5);
+            let life = rng.gen_range(0.18..0.35);
 
             commands.spawn((
                 SpriteBundle {
                     sprite: Sprite {
-                        color,
+                        color: Color::srgba(0.2, 0.85, 1.0, 0.85),
                         custom_size: Some(Vec2::splat(size)),
                         ..default()
                     },
-                    transform: Transform::from_xyz(
-                        p_pos.x + rng.gen_range(-14.0..14.0),
-                        p_pos.y - 36.0,
-                        8.0,
-                    ),
+                    transform: Transform::from_xyz(p_pos.x + offset_x, p_pos.y - 32.0, 9.0),
                     ..default()
                 },
                 ThrusterParticle {
-                    velocity: Vec2::new(angle_offset * 120.0, -speed),
-                    lifetime: Timer::from_seconds(rng.gen_range(0.18..0.30), TimerMode::Once),
+                    velocity: Vec2::new(vx, vy),
+                    lifetime: Timer::from_seconds(life, TimerMode::Once),
                     initial_size: size,
                 },
             ));
         }
     }
 
-    for (entity, mut transform, mut sprite, mut particle) in query_thrusters.iter_mut() {
+    for (entity, mut transform, mut sprite, mut particle) in query_particles.iter_mut() {
         particle.lifetime.tick(time.delta());
-        let progress = particle.lifetime.fraction();
-        transform.translation.x += particle.velocity.x * dt;
-        transform.translation.y += particle.velocity.y * dt;
-
-        let scale = 1.0 - progress;
-        sprite.custom_size = Some(Vec2::splat(particle.initial_size * scale));
-
         if particle.lifetime.finished() {
             commands.entity(entity).despawn();
+        } else {
+            transform.translation.x += particle.velocity.x * dt;
+            transform.translation.y += particle.velocity.y * dt;
+            let progress = particle.lifetime.fraction();
+            let size = particle.initial_size * (1.0 - progress);
+            sprite.custom_size = Some(Vec2::splat(size));
         }
     }
 }
 
 fn camera_shake_system(
     time: Res<Time>,
-    mut shake: ResMut<ScreenShake>,
-    mut query_cam: Query<&mut Transform, With<MainCamera>>,
+    mut screen_shake: ResMut<ScreenShake>,
+    mut query_camera: Query<&mut Transform, With<MainCamera>>,
+) {
+    if let Ok(mut camera_tr) = query_camera.get_single_mut() {
+        if screen_shake.timer > 0.0 {
+            screen_shake.timer -= time.delta_seconds();
+            let mut rng = rand::thread_rng();
+            let shake_x = rng.gen_range(-1.0..1.0) * screen_shake.intensity;
+            let shake_y = rng.gen_range(-1.0..1.0) * screen_shake.intensity;
+            camera_tr.translation.x = shake_x;
+            camera_tr.translation.y = shake_y;
+        } else {
+            camera_tr.translation.x = 0.0;
+            camera_tr.translation.y = 0.0;
+        }
+    }
+}
+
+fn floating_text_system(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut Transform, &mut FloatingText)>,
 ) {
     let dt = time.delta_seconds();
-    if let Ok(mut cam_tr) = query_cam.get_single_mut() {
-        if shake.timer > 0.0 {
-            shake.timer -= dt;
-            let mut rng = rand::thread_rng();
-            let factor = (shake.timer / 0.35).clamp(0.0, 1.0);
-            let ox = rng.gen_range(-shake.intensity..shake.intensity) * factor;
-            let oy = rng.gen_range(-shake.intensity..shake.intensity) * factor;
-            cam_tr.translation.x = ox;
-            cam_tr.translation.y = oy;
+    for (entity, mut transform, mut floating) in query.iter_mut() {
+        floating.timer.tick(time.delta());
+        if floating.timer.finished() {
+            commands.entity(entity).despawn();
         } else {
-            cam_tr.translation.x = 0.0;
-            cam_tr.translation.y = 0.0;
+            transform.translation.x += floating.velocity.x * dt;
+            transform.translation.y += floating.velocity.y * dt;
         }
     }
 }
 
 fn combo_system(time: Res<Time>, mut current_player: ResMut<CurrentPlayer>) {
-    let dt = time.delta_seconds();
     if current_player.combo_timer > 0.0 {
-        current_player.combo_timer -= dt;
+        current_player.combo_timer -= time.delta_seconds();
         if current_player.combo_timer <= 0.0 {
             current_player.combo_count = 0;
             current_player.combo_multiplier = 1;
@@ -1806,52 +2010,62 @@ fn combo_system(time: Res<Time>, mut current_player: ResMut<CurrentPlayer>) {
     }
 }
 
-// ============================================================================
-// Fondo Espacial (Planetas y Estrellas)
-// ============================================================================
-
-fn planet_system(
-    time: Res<Time>,
-    mut query: Query<&mut Transform, With<BackgroundPlanet>>,
-) {
-    let dt = time.delta_seconds();
+fn spawn_floating_text(commands: &mut Commands, pos: Vec2, _text: &str, _color: Color) {
     let mut rng = rand::thread_rng();
-    for mut transform in query.iter_mut() {
-        transform.translation.y -= 28.0 * dt;
-        if transform.translation.y < -550.0 {
-            transform.translation.y = 550.0;
+    let vx = rng.gen_range(-20.0..20.0);
+    let vy = rng.gen_range(40.0..70.0);
+
+    commands.spawn((
+        SpatialBundle {
+            transform: Transform::from_xyz(pos.x, pos.y + 15.0, 15.0),
+            ..default()
+        },
+        FloatingText {
+            timer: Timer::from_seconds(0.85, TimerMode::Once),
+            velocity: Vec2::new(vx, vy),
+        },
+    ));
+}
+
+fn planet_system(time: Res<Time>, mut query: Query<(&mut Transform, &BackgroundPlanet)>) {
+    let dt = time.delta_seconds();
+    for (mut transform, planet) in query.iter_mut() {
+        transform.translation.y -= planet.speed * dt;
+        if transform.translation.y < -750.0 {
+            let mut rng = rand::thread_rng();
+            transform.translation.y = 750.0;
             transform.translation.x = rng.gen_range(-220.0..220.0);
         }
     }
 }
 
-fn star_system(
-    time: Res<Time>,
-    mut query: Query<(&mut Transform, &BackgroundStar)>,
-) {
+fn star_system(time: Res<Time>, mut query: Query<(&mut Transform, &BackgroundStar)>) {
     let dt = time.delta_seconds();
     for (mut transform, star) in query.iter_mut() {
         transform.translation.y -= star.speed * dt;
-        if transform.translation.y < -460.0 {
-            transform.translation.y = 460.0;
+        if transform.translation.y < -660.0 {
+            let mut rng = rand::thread_rng();
+            transform.translation.y = 660.0;
+            transform.translation.x = rng.gen_range(-380.0..380.0);
         }
     }
 }
 
 // ============================================================================
-// Interfaz de Usuario Limpia (Sin Iconos ni Emojis)
+// UI CON EGUI: Selección de Nave en Formato Vertical Completo
 // ============================================================================
 
 fn ui_name_input(
     mut contexts: EguiContexts,
     mut current_player: ResMut<CurrentPlayer>,
     leaderboard: Res<Leaderboard>,
+    assets: Res<GameAssets>,
     mut next_state: ResMut<NextState<AppState>>,
 ) {
     let ctx = contexts.ctx_mut();
 
     egui::CentralPanel::default()
-        .frame(egui::Frame::default().fill(egui::Color32::from_rgb(3, 4, 6)))
+        .frame(egui::Frame::default().fill(egui::Color32::from_rgb(8, 12, 22)))
         .show(ctx, |ui| {
             egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
@@ -1860,252 +2074,275 @@ fn ui_name_input(
                         ui.add_space(10.0);
                         ui.heading(
                             egui::RichText::new("FERRIS SPACE DEFENDER")
-                                .size(21.0)
-                                .color(egui::Color32::from_rgb(255, 110, 40))
+                                .size(24.0)
+                                .color(egui::Color32::from_rgb(0, 220, 255))
                                 .strong(),
                         );
                         ui.label(
-                            egui::RichText::new("Torneo de Programadores - Rust Peru")
-                                .size(13.0)
-                                .color(egui::Color32::from_rgb(180, 220, 255)),
+                            egui::RichText::new("RUST PERU COMMUNITY EDITION")
+                                .size(12.0)
+                                .color(egui::Color32::from_rgb(255, 180, 50))
+                                .strong(),
+                        );
+                        ui.add_space(10.0);
+
+                        // Card Nombre del Piloto
+                        egui::Frame::default()
+                            .fill(egui::Color32::from_rgb(16, 24, 40))
+                            .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 80, 130)))
+                            .rounding(8.0)
+                            .inner_margin(10.0)
+                            .show(ui, |ui| {
+                                ui.set_max_width(340.0);
+                                ui.label(egui::RichText::new("IDENTIFICADOR DEL PILOTO").size(12.0).color(egui::Color32::LIGHT_BLUE).strong());
+                                ui.add_space(4.0);
+                                ui.horizontal(|ui| {
+                                    let name_text = if current_player.name.is_empty() { "Piloto_Rust".to_string() } else { current_player.name.clone() };
+                                    ui.label(egui::RichText::new(name_text).size(16.0).color(egui::Color32::YELLOW).strong());
+                                });
+                                ui.add_space(4.0);
+                                ui.horizontal(|ui| {
+                                    if ui.button("Borrar").clicked() { current_player.name.pop(); }
+                                    if ui.button("Aleatorio").clicked() {
+                                        let n = ["Ferris_Pro", "Rustacean", "Async_King", "Cargo_Runner", "Borrow_God"];
+                                        let mut rng = rand::thread_rng();
+                                        current_player.name = n[rng.gen_range(0..n.len())].to_string();
+                                    }
+                                });
+                            });
+
+                        ui.add_space(14.0);
+                        ui.heading(
+                            egui::RichText::new("SELECCIONA TU CLASE DE NAVE")
+                                .size(16.0)
+                                .color(egui::Color32::from_rgb(255, 215, 0))
+                                .strong(),
+                        );
+                        ui.label(
+                            egui::RichText::new("Desliza verticalmente para explorar las 4 clases de naves ilustradas")
+                                .size(11.0)
+                                .color(egui::Color32::GRAY),
                         );
                         ui.add_space(8.0);
 
-                        ui.scope(|ui| {
-                            ui.set_max_width(330.0);
+                        // Lista Vertical Adaptable de 4 Clases
+                        let classes = [
+                            (ShipClass::Defensor, &assets.card_defensor, &assets.ship_defensor, egui::Color32::from_rgb(255, 190, 40)),
+                            (ShipClass::Mago, &assets.card_mago, &assets.ship_mago, egui::Color32::from_rgb(40, 200, 255)),
+                            (ShipClass::Asesino, &assets.card_asesino, &assets.ship_asesino, egui::Color32::from_rgb(50, 255, 120)),
+                            (ShipClass::Artillero, &assets.card_artillero, &assets.ship_artillero, egui::Color32::from_rgb(255, 80, 50)),
+                        ];
 
-                            // Tarjeta de Ingreso de Nombre
+                        for (s_class, card_tex, _ship_tex, border_color) in classes {
+                            let is_selected = current_player.ship_class == s_class;
+
                             egui::Frame::default()
-                                .fill(egui::Color32::from_rgb(18, 26, 45))
+                                .fill(if is_selected { egui::Color32::from_rgb(24, 38, 65) } else { egui::Color32::from_rgb(14, 18, 30) })
+                                .stroke(egui::Stroke::new(if is_selected { 2.5 } else { 1.0 }, if is_selected { border_color } else { egui::Color32::DARK_GRAY }))
                                 .rounding(10.0)
-                                .inner_margin(egui::Margin::symmetric(10.0, 12.0))
-                                .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(45, 65, 105)))
+                                .inner_margin(12.0)
                                 .show(ui, |ui| {
-                                    ui.label(
-                                        egui::RichText::new("Nombre del Concursante:")
-                                            .size(13.0)
-                                            .color(egui::Color32::WHITE)
-                                            .strong(),
-                                    );
-                                    ui.add_space(4.0);
-
-                                    // Caja de visualización del nombre
-                                    egui::Frame::default()
-                                        .fill(egui::Color32::from_rgb(10, 15, 28))
-                                        .rounding(6.0)
-                                        .stroke(egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(255, 180, 50)))
-                                        .inner_margin(8.0)
-                                        .show(ui, |ui| {
-                                            ui.horizontal(|ui| {
-                                                let display_name = if current_player.name.is_empty() {
-                                                    "Toca las teclas abajo...".to_string()
-                                                } else {
-                                                    current_player.name.clone()
-                                                };
-                                                let text_color = if current_player.name.is_empty() {
-                                                    egui::Color32::GRAY
-                                                } else {
-                                                    egui::Color32::from_rgb(255, 220, 80)
-                                                };
-                                                ui.label(
-                                                    egui::RichText::new(display_name)
-                                                        .size(17.0)
-                                                        .color(text_color)
-                                                        .strong(),
-                                                );
+                                    ui.set_max_width(340.0);
+                                    ui.vertical(|ui| {
+                                        ui.horizontal(|ui| {
+                                            if let Some(tex_id) = contexts.image_id(card_tex) {
+                                                ui.image(egui::SizedTexture::new(tex_id, egui::vec2(68.0, 95.0)));
+                                            }
+                                            ui.vertical(|ui| {
+                                                ui.label(egui::RichText::new(s_class.name()).size(14.0).color(border_color).strong());
+                                                ui.add_space(2.0);
+                                                ui.label(egui::RichText::new(s_class.description()).size(10.5).color(egui::Color32::from_rgb(200, 210, 230)));
                                             });
                                         });
 
-                                    ui.add_space(8.0);
+                                        ui.add_space(6.0);
+                                        let btn = ui.add(
+                                            egui::Button::new(
+                                                egui::RichText::new(if is_selected { "✓ CLASE SELECCIONADA" } else { "SELECCIONAR CLASE" })
+                                                    .size(13.0)
+                                                    .color(if is_selected { egui::Color32::BLACK } else { egui::Color32::WHITE })
+                                                    .strong(),
+                                            )
+                                            .fill(if is_selected { border_color } else { egui::Color32::from_rgb(30, 45, 75) })
+                                            .min_size(egui::vec2(310.0, 34.0)),
+                                        );
 
-                                    // Teclado Arcade
-                                    ui.spacing_mut().item_spacing = egui::vec2(2.5, 3.5);
-
-                                    let rows: &[&[&str]] = &[
-                                        &["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
-                                        &["A", "S", "D", "F", "G", "H", "J", "K", "L", "N"],
-                                        &["Z", "X", "C", "V", "B", "N", "M", "1", "2", "3"],
-                                    ];
-
-                                    for row in rows {
-                                        ui.horizontal(|ui| {
-                                            for &key in *row {
-                                                let btn = ui.add(
-                                                    egui::Button::new(
-                                                        egui::RichText::new(key)
-                                                            .size(13.0)
-                                                            .color(egui::Color32::WHITE)
-                                                            .strong(),
-                                                    )
-                                                    .min_size(egui::vec2(27.0, 30.0))
-                                                    .fill(egui::Color32::from_rgb(32, 48, 80)),
-                                                );
-                                                if btn.clicked() && current_player.name.len() < 14 {
-                                                    current_player.name.push_str(key);
-                                                }
-                                            }
-                                        });
-                                    }
-
-                                    ui.add_space(4.0);
-
-                                    ui.horizontal(|ui| {
-                                        if ui.add(
-                                            egui::Button::new(egui::RichText::new("Borrar").size(12.0).color(egui::Color32::WHITE).strong())
-                                                .min_size(egui::vec2(85.0, 30.0))
-                                                .fill(egui::Color32::from_rgb(180, 50, 50)),
-                                        ).clicked() {
-                                            current_player.name.pop();
-                                        }
-                                        if ui.add(
-                                            egui::Button::new(egui::RichText::new("Espacio").size(12.0).color(egui::Color32::WHITE).strong())
-                                                .min_size(egui::vec2(85.0, 30.0))
-                                                .fill(egui::Color32::from_rgb(50, 75, 115)),
-                                        ).clicked() && current_player.name.len() < 14 {
-                                            current_player.name.push(' ');
-                                        }
-                                        if ui.add(
-                                            egui::Button::new(egui::RichText::new("Aleatorio").size(12.0).color(egui::Color32::WHITE).strong())
-                                                .min_size(egui::vec2(95.0, 30.0))
-                                                .fill(egui::Color32::from_rgb(40, 130, 90)),
-                                        ).clicked() {
-                                            let nicknames = ["Ferris_Dev", "Rustacean", "Async_Pro", "Borrow_King", "Cargo_Run", "Lima_Coder", "Byte_Master"];
-                                            let mut rng = rand::thread_rng();
-                                            current_player.name = nicknames[rng.gen_range(0..nicknames.len())].to_string();
+                                        if btn.clicked() {
+                                            current_player.ship_class = s_class;
                                         }
                                     });
+                                });
+                            ui.add_space(8.0);
+                        }
 
-                                    ui.add_space(8.0);
-                                    ui.label(
-                                        egui::RichText::new("SELECCION DE ARQUETIPO DE NAVE")
-                                            .size(12.5)
-                                            .color(egui::Color32::from_rgb(180, 215, 255))
-                                            .strong(),
-                                    );
-                                    ui.add_space(4.0);
+                        ui.add_space(10.0);
 
-                                    ui.horizontal(|ui| {
-                                        let is_std = current_player.ship_class == ShipClass::Standard;
-                                        let is_tokio = current_player.ship_class == ShipClass::TokioAsync;
-                                        let is_tank = current_player.ship_class == ShipClass::MutexTank;
+                        let btn_start = ui.add(
+                            egui::Button::new(
+                                egui::RichText::new("🚀 INICIAR MISION EN EL ESPACIO")
+                                    .size(17.0)
+                                    .color(egui::Color32::WHITE)
+                                    .strong(),
+                            )
+                            .min_size(egui::vec2(310.0, 48.0))
+                            .fill(egui::Color32::from_rgb(220, 40, 30)),
+                        );
 
-                                        if ui.add(
-                                            egui::Button::new(
-                                                egui::RichText::new("STANDARD\n(Balance)")
-                                                    .size(11.0)
-                                                    .color(if is_std { egui::Color32::WHITE } else { egui::Color32::GRAY })
-                                                    .strong(),
-                                            )
-                                            .min_size(egui::vec2(86.0, 36.0))
-                                            .fill(if is_std { egui::Color32::from_rgb(30, 110, 190) } else { egui::Color32::from_rgb(20, 24, 36) })
-                                            .stroke(egui::Stroke::new(if is_std { 1.5_f32 } else { 0.5_f32 }, if is_std { egui::Color32::from_rgb(0, 220, 255) } else { egui::Color32::DARK_GRAY })),
-                                        ).clicked() {
-                                            current_player.ship_class = ShipClass::Standard;
-                                        }
+                        if btn_start.clicked() {
+                            if current_player.name.trim().is_empty() {
+                                current_player.name = "Piloto_Rust".to_string();
+                            }
+                            next_state.set(AppState::Playing);
+                        }
 
-                                        if ui.add(
-                                            egui::Button::new(
-                                                egui::RichText::new("TOKIO\n(Velocidad)")
-                                                    .size(11.0)
-                                                    .color(if is_tokio { egui::Color32::WHITE } else { egui::Color32::GRAY })
-                                                    .strong(),
-                                            )
-                                            .min_size(egui::vec2(86.0, 36.0))
-                                            .fill(if is_tokio { egui::Color32::from_rgb(25, 130, 65) } else { egui::Color32::from_rgb(20, 24, 36) })
-                                            .stroke(egui::Stroke::new(if is_tokio { 1.5_f32 } else { 0.5_f32 }, if is_tokio { egui::Color32::GREEN } else { egui::Color32::DARK_GRAY })),
-                                        ).clicked() {
-                                            current_player.ship_class = ShipClass::TokioAsync;
-                                        }
+                        ui.add_space(16.0);
+                        ui.heading(
+                            egui::RichText::new("TABLA DE LIDERES (TOP 5)")
+                                .size(14.0)
+                                .color(egui::Color32::from_rgb(255, 215, 0)),
+                        );
+                        ui.add_space(4.0);
 
-                                        if ui.add(
-                                            egui::Button::new(
-                                                egui::RichText::new("MUTEX\n(Tanque)")
-                                                    .size(11.0)
-                                                    .color(if is_tank { egui::Color32::WHITE } else { egui::Color32::GRAY })
-                                                    .strong(),
-                                            )
-                                            .min_size(egui::vec2(86.0, 36.0))
-                                            .fill(if is_tank { egui::Color32::from_rgb(170, 110, 20) } else { egui::Color32::from_rgb(20, 24, 36) })
-                                            .stroke(egui::Stroke::new(if is_tank { 1.5_f32 } else { 0.5_f32 }, if is_tank { egui::Color32::from_rgb(255, 215, 0) } else { egui::Color32::DARK_GRAY })),
-                                        ).clicked() {
-                                            current_player.ship_class = ShipClass::MutexTank;
-                                        }
-                                    });
-
-                                    ui.add_space(3.0);
-                                    ui.label(
-                                        egui::RichText::new(current_player.ship_class.description())
-                                            .size(10.5)
-                                            .color(egui::Color32::from_rgb(180, 200, 220)),
-                                    );
-
-                                    ui.add_space(10.0);
-
-                                    let btn_start = ui.add(
-                                        egui::Button::new(
-                                            egui::RichText::new("EMPEZAR A JUGAR")
-                                                .size(16.0)
-                                                .color(egui::Color32::WHITE)
-                                                .strong(),
-                                        )
-                                        .min_size(egui::vec2(280.0, 44.0))
-                                        .fill(egui::Color32::from_rgb(220, 50, 40)),
-                                    );
-
-                                    if btn_start.clicked() {
-                                        if current_player.name.trim().is_empty() {
-                                            current_player.name = "Piloto_Rust".to_string();
-                                        }
-                                        next_state.set(AppState::Playing);
+                        egui::Frame::default()
+                            .fill(egui::Color32::from_rgb(12, 16, 28))
+                            .rounding(8.0)
+                            .inner_margin(8.0)
+                            .show(ui, |ui| {
+                                egui::Grid::new("init_leaderboard").striped(true).min_col_width(65.0).show(ui, |ui| {
+                                    for (idx, entry) in leaderboard.entries.iter().take(5).enumerate() {
+                                        ui.label(format!("{}.", idx + 1));
+                                        ui.label(&entry.name);
+                                        ui.label(format!("{} pts", entry.score));
+                                        ui.label(format!("Ola {}", entry.wave));
+                                        ui.end_row();
                                     }
                                 });
-
-                            ui.add_space(14.0);
-
-                            // Leaderboard
-                            ui.heading(
-                                egui::RichText::new("TABLA DE LIDERES (TOP 8)")
-                                    .size(15.0)
-                                    .color(egui::Color32::from_rgb(255, 215, 0)),
-                            );
-                            ui.add_space(5.0);
-
-                            egui::Frame::default()
-                                .fill(egui::Color32::from_rgb(14, 20, 35))
-                                .rounding(8.0)
-                                .inner_margin(10.0)
-                                .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(35, 50, 80)))
-                                .show(ui, |ui| {
-                                    egui::Grid::new("leaderboard_grid")
-                                        .striped(true)
-                                        .min_col_width(62.0)
-                                        .show(ui, |ui| {
-                                            ui.label(egui::RichText::new("Pos").strong().color(egui::Color32::GRAY));
-                                            ui.label(egui::RichText::new("Estudiante").strong().color(egui::Color32::WHITE));
-                                            ui.label(egui::RichText::new("Puntaje").strong().color(egui::Color32::from_rgb(255, 200, 50)));
-                                            ui.label(egui::RichText::new("Oleada").strong().color(egui::Color32::LIGHT_BLUE));
-                                            ui.end_row();
-
-                                            for (idx, entry) in leaderboard.entries.iter().take(8).enumerate() {
-                                                ui.label(format!("{}.", idx + 1));
-                                                ui.label(&entry.name);
-                                                ui.label(format!("{} pts", entry.score));
-                                                ui.label(format!("Ola {}", entry.wave));
-                                                ui.end_row();
-                                            }
-                                        });
-                                });
-                            ui.add_space(20.0);
-                        });
+                            });
+                        ui.add_space(20.0);
                     });
                 });
         });
 }
 
+// ============================================================================
+// UI CON EGUI: Modal de Selection Rogue-lite al Derrotar Jefe
+// ============================================================================
+
+fn ui_skill_draft(
+    mut contexts: EguiContexts,
+    mut current_player: ResMut<CurrentPlayer>,
+    skill_draft: Res<SkillDraftOptions>,
+    assets: Res<GameAssets>,
+    mut next_state: ResMut<NextState<AppState>>,
+) {
+    let ctx = contexts.ctx_mut();
+
+    egui::CentralPanel::default()
+        .frame(egui::Frame::default().fill(egui::Color32::from_rgba_unmultiplied(4, 8, 18, 240)))
+        .show(ctx, |ui| {
+            egui::ScrollArea::vertical()
+                .auto_shrink([false, false])
+                .show(ui, |ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.add_space(20.0);
+                        ui.heading(
+                            egui::RichText::new("🏆 ¡JEFE SUPREMO DERROTADO!")
+                                .size(22.0)
+                                .color(egui::Color32::from_rgb(255, 215, 0))
+                                .strong(),
+                        );
+                        ui.label(
+                            egui::RichText::new("Selecciona 1 Carta de Habilidad Rogue-lite para mejorar tu Nave:")
+                                .size(13.0)
+                                .color(egui::Color32::from_rgb(180, 220, 255)),
+                        );
+                        ui.add_space(14.0);
+
+                        for &skill in &skill_draft.options {
+                            egui::Frame::default()
+                                .fill(egui::Color32::from_rgb(16, 26, 45))
+                                .stroke(egui::Stroke::new(1.5, egui::Color32::from_rgb(0, 200, 255)))
+                                .rounding(10.0)
+                                .inner_margin(12.0)
+                                .show(ui, |ui| {
+                                    ui.set_max_width(340.0);
+                                    ui.vertical(|ui| {
+                                        ui.horizontal(|ui| {
+                                            if let Some(tex_handle) = assets.skill_textures.get(&skill) {
+                                                if let Some(tex_id) = contexts.image_id(tex_handle) {
+                                                    ui.image(egui::SizedTexture::new(tex_id, egui::vec2(65.0, 90.0)));
+                                                }
+                                            }
+                                            ui.vertical(|ui| {
+                                                let tag_color = if skill.is_active() { egui::Color32::from_rgb(255, 80, 255) } else { egui::Color32::from_rgb(80, 255, 140) };
+                                                ui.label(egui::RichText::new(if skill.is_active() { "⚡ HABILIDAD ACTIVA TACTIL" } else { "🛡️ MEJORA PASIVA" }).size(10.0).color(tag_color).strong());
+                                                ui.label(egui::RichText::new(skill.name()).size(16.0).color(egui::Color32::WHITE).strong());
+                                                ui.add_space(2.0);
+                                                ui.label(egui::RichText::new(skill.description()).size(11.0).color(egui::Color32::from_rgb(200, 215, 235)));
+                                            });
+                                        });
+
+                                        ui.add_space(6.0);
+                                        let btn = ui.add(
+                                            egui::Button::new(
+                                                egui::RichText::new("EQUIPAR ESTA HABILIDAD")
+                                                    .size(13.5)
+                                                    .color(egui::Color32::BLACK)
+                                                    .strong(),
+                                            )
+                                            .fill(egui::Color32::from_rgb(0, 220, 255))
+                                            .min_size(egui::vec2(310.0, 36.0)),
+                                        );
+
+                                        if btn.clicked() {
+                                            if skill.is_active() {
+                                                if !current_player.active_skills.contains(&skill) {
+                                                    current_player.active_skills.push(skill);
+                                                }
+                                            } else {
+                                                current_player.passive_skills.push(skill);
+                                                match skill {
+                                                    SkillId::OverclockMutex => current_player.fire_rate_mult += 0.25,
+                                                    SkillId::UnsafeBlock => {
+                                                        current_player.damage_mult += 0.40;
+                                                        current_player.max_health *= 0.85;
+                                                        current_player.health = current_player.health.min(current_player.max_health);
+                                                    }
+                                                    SkillId::PatternMatching => current_player.crit_chance += 0.15,
+                                                    SkillId::TokioReactor => current_player.speed_mult += 0.20,
+                                                    SkillId::VectorCapacity => {
+                                                        current_player.max_shield += 50.0;
+                                                        current_player.shield += 50.0;
+                                                    }
+                                                    SkillId::OptionSome => current_player.powerup_drop_mult += 0.35,
+                                                    SkillId::ZeroCostAbstraction => current_player.cooldown_reduction *= 0.80,
+                                                    _ => {}
+                                                }
+                                            }
+                                            next_state.set(AppState::Playing);
+                                        }
+                                    });
+                                });
+                            ui.add_space(10.0);
+                        }
+                    });
+                });
+        });
+}
+
+// ============================================================================
+// UI CON EGUI: HUD de Juego y Botones Táctiles para Habilidades Activas
+// ============================================================================
+
 fn ui_playing_hud(
     mut contexts: EguiContexts,
-    current_player: Res<CurrentPlayer>,
+    mut current_player: ResMut<CurrentPlayer>,
     boss_query: Query<&Enemy>,
+    mut commands: Commands,
+    assets: Res<GameAssets>,
+    mut screen_shake: ResMut<ScreenShake>,
+    mut query_enemies: Query<(Entity, &mut Enemy, &Transform), (Without<Player>, Without<PowerUpItem>)>,
+    query_enemy_lasers: Query<Entity, With<EnemyLaser>>,
 ) {
     let ctx = contexts.ctx_mut();
 
@@ -2129,34 +2366,14 @@ fn ui_playing_hud(
                 );
 
                 ui.separator();
-
                 ui.label(format!("OLA: {}", current_player.wave));
 
-                if current_player.combo_multiplier > 1 {
-                    ui.separator();
-                    ui.label(
-                        egui::RichText::new(format!("COMBO x{}", current_player.combo_multiplier))
-                            .color(egui::Color32::from_rgb(255, 215, 0))
-                            .strong()
-                            .size(15.0),
-                    );
-                }
-
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    // Barra de Vida
                     let health_frac = (current_player.health / current_player.max_health).clamp(0.0, 1.0);
-                    let bar_color = if health_frac > 0.5 {
-                        egui::Color32::GREEN
-                    } else if health_frac > 0.25 {
-                        egui::Color32::YELLOW
-                    } else {
-                        egui::Color32::RED
-                    };
-
+                    let bar_color = if health_frac > 0.5 { egui::Color32::GREEN } else if health_frac > 0.25 { egui::Color32::YELLOW } else { egui::Color32::RED };
                     ui.label(format!("HP {:.0}%", health_frac * 100.0));
                     ui.add(egui::ProgressBar::new(health_frac).fill(bar_color).desired_width(55.0));
 
-                    // Barra de Escudo si está activo
                     if current_player.shield > 0.0 {
                         let shield_frac = (current_player.shield / current_player.max_shield).clamp(0.0, 1.0);
                         ui.label(format!("ESC {:.0}", current_player.shield));
@@ -2165,63 +2382,97 @@ fn ui_playing_hud(
                 });
             });
 
-            // Banner inferior del HUD: Avisos de estado y barra de jefe
-            if current_player.status_timer > 0.0 || current_player.triple_shot_timer > 0.0 {
+            // Status message
+            if current_player.status_timer > 0.0 {
                 ui.horizontal(|ui| {
-                    if current_player.triple_shot_timer > 0.0 {
-                        ui.label(
-                            egui::RichText::new(format!("TRIPLE SHOT: {:.1}s", current_player.triple_shot_timer))
-                                .color(egui::Color32::from_rgb(255, 80, 255))
-                                .strong(),
-                        );
-                    }
-                    if current_player.status_timer > 0.0 {
-                        ui.label(
-                            egui::RichText::new(&current_player.status_message)
-                                .color(egui::Color32::from_rgb(255, 220, 80))
-                                .strong(),
-                        );
-                    }
+                    ui.label(egui::RichText::new(&current_player.status_message).color(egui::Color32::YELLOW).strong());
                 });
             }
 
-            // Si hay un Jefe activo, mostrar barra de vida del Jefe
+            // Barra de vida de Jefe
             for enemy in boss_query.iter() {
                 if enemy.is_boss {
                     let boss_frac = (enemy.health / enemy.max_health).clamp(0.0, 1.0);
-                    let (boss_title, bar_color) = if enemy.is_enraged {
-                        ("JEFE (FASE 2: FURIA):", egui::Color32::from_rgb(255, 60, 20))
-                    } else {
-                        ("JEFE (BORROW CHECKER):", egui::Color32::from_rgb(255, 40, 40))
-                    };
+                    let bar_color = if enemy.is_enraged { egui::Color32::RED } else { egui::Color32::from_rgb(255, 140, 0) };
                     ui.horizontal(|ui| {
-                        ui.label(
-                            egui::RichText::new(boss_title)
-                                .color(bar_color)
-                                .strong(),
-                        );
-                        ui.add(
-                            egui::ProgressBar::new(boss_frac)
-                                .fill(bar_color)
-                                .desired_width(180.0),
-                        );
-                        ui.label(format!("{:.0}%", boss_frac * 100.0));
+                        ui.label(egui::RichText::new("JEFE BORROW CHECKER:").color(bar_color).strong());
+                        ui.add(egui::ProgressBar::new(boss_frac).fill(bar_color).desired_width(180.0));
                     });
                 }
             }
         });
+
+    // Panel Inferior: Botones Táctiles para Habilidades Activas
+    if !current_player.active_skills.is_empty() {
+        egui::TopBottomPanel::bottom("active_skill_touch_panel")
+            .frame(egui::Frame::default().fill(egui::Color32::TRANSPARENT))
+            .show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    ui.add_space(15.0);
+                    for (idx, &skill) in current_player.active_skills.clone().iter().enumerate() {
+                        let is_cd = if idx == 0 { current_player.active_cooldown_1 > 0.0 } else { current_player.active_cooldown_2 > 0.0 };
+                        let cd_val = if idx == 0 { current_player.active_cooldown_1 } else { current_player.active_cooldown_2 };
+
+                        let (label_str, fill_color) = if is_cd {
+                            (format!("{}\n[{:.1}s]", skill.name(), cd_val), egui::Color32::from_rgb(40, 45, 60))
+                        } else {
+                            (format!("⚡ {}\n¡ACTIVAR!", skill.name()), egui::Color32::from_rgb(0, 180, 230))
+                        };
+
+                        let btn = ui.add(
+                            egui::Button::new(
+                                egui::RichText::new(label_str)
+                                    .size(11.5)
+                                    .color(if is_cd { egui::Color32::GRAY } else { egui::Color32::WHITE })
+                                    .strong(),
+                            )
+                            .min_size(egui::vec2(110.0, 46.0))
+                            .fill(fill_color)
+                            .stroke(egui::Stroke::new(1.5, if is_cd { egui::Color32::DARK_GRAY } else { egui::Color32::YELLOW })),
+                        );
+
+                        if btn.clicked() && !is_cd {
+                            if idx == 0 {
+                                current_player.active_cooldown_1 = skill.cooldown() * current_player.cooldown_reduction;
+                            } else {
+                                current_player.active_cooldown_2 = skill.cooldown() * current_player.cooldown_reduction;
+                            }
+
+                            match skill {
+                                SkillId::ZeroCostBeam => {
+                                    current_player.beam_active_timer = 3.0;
+                                    current_player.status_message = "ZERO-COST BEAM ACTIVADO (3S)".to_string();
+                                    current_player.status_timer = 3.0;
+                                    trigger_vibration(200);
+                                }
+                                SkillId::CargoClean => {
+                                    trigger_nuke_effect(&mut commands, &assets, &mut current_player, &mut screen_shake, &mut query_enemies, &query_enemy_lasers);
+                                }
+                                _ => {}
+                            }
+                        }
+                        ui.add_space(10.0);
+                    }
+                });
+            });
+    }
 }
+
+// ============================================================================
+// UI CON EGUI: Game Over con Carta / Medalla de Rango de Torneo
+// ============================================================================
 
 fn ui_game_over(
     mut contexts: EguiContexts,
     current_player: Res<CurrentPlayer>,
     leaderboard: Res<Leaderboard>,
+    assets: Res<GameAssets>,
     mut next_state: ResMut<NextState<AppState>>,
 ) {
     let ctx = contexts.ctx_mut();
 
     egui::CentralPanel::default()
-        .frame(egui::Frame::default().fill(egui::Color32::from_rgb(4, 2, 4)))
+        .frame(egui::Frame::default().fill(egui::Color32::from_rgb(6, 4, 8)))
         .show(ctx, |ui| {
             egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
@@ -2236,176 +2487,73 @@ fn ui_game_over(
                         );
                         ui.add_space(6.0);
 
-                        // Consola Auténtica de Rust Panic (Classic Rust Panic Terminal Dump)
-                        let pilot_thread_name = if current_player.name.trim().is_empty() {
-                            "ferris_main".to_string()
+                        // Medalla de Rango Ganada
+                        let (rank_name, rank_color, rank_tex) = if current_player.score >= 3500 {
+                            ("🥇 RANGO S: LEYENDA DE RUST", egui::Color32::from_rgb(255, 215, 0), &assets.rank_s)
+                        } else if current_player.score >= 2000 {
+                            ("🥈 RANGO A: COMANDANTE SENIOR", egui::Color32::from_rgb(100, 240, 255), &assets.rank_a)
+                        } else if current_player.score >= 1000 {
+                            ("🥉 RANGO B: PILOTO CERTIFICADO", egui::Color32::from_rgb(120, 255, 120), &assets.rank_b)
                         } else {
-                            format!("pilot::{}", current_player.name.trim().replace(' ', "_").to_lowercase())
+                            ("🎖️ RANGO C: CADETE SPACE", egui::Color32::from_rgb(200, 200, 200), &assets.rank_c)
                         };
 
                         egui::Frame::default()
-                            .fill(egui::Color32::from_rgb(12, 10, 14))
-                            .stroke(egui::Stroke::new(1.0f32, egui::Color32::from_rgb(210, 50, 50)))
-                            .rounding(6.0)
-                            .inner_margin(10.0)
+                            .fill(egui::Color32::from_rgb(18, 14, 26))
+                            .stroke(egui::Stroke::new(2.0, rank_color))
+                            .rounding(10.0)
+                            .inner_margin(12.0)
                             .show(ui, |ui| {
                                 ui.set_max_width(340.0);
                                 ui.vertical(|ui| {
-                                    ui.label(
-                                        egui::RichText::new("[ STDERR :: RUST RUNTIME CRASH DUMP ]")
-                                            .size(10.0)
-                                            .monospace()
-                                            .color(egui::Color32::from_rgb(255, 85, 85))
-                                            .strong(),
-                                    );
-                                    ui.add_space(2.0);
-                                    ui.label(
-                                        egui::RichText::new(format!(
-                                            "thread '{}' panicked at 'fatal_hull_breach: integrity reached 0.0%', src/spacecraft/pilot.rs:404:13",
-                                            pilot_thread_name
-                                        ))
-                                        .size(10.0)
-                                        .monospace()
-                                        .color(egui::Color32::from_rgb(255, 120, 120)),
-                                    );
-                                    ui.add_space(3.0);
-                                    ui.label(
-                                        egui::RichText::new("stack backtrace:")
-                                            .size(9.5)
-                                            .monospace()
-                                            .color(egui::Color32::from_rgb(170, 170, 180)),
-                                    );
-                                    ui.label(
-                                        egui::RichText::new("   0: rust_begin_unwind\n   1: core::panicking::panic_fmt\n   2: ferris_space_defender::combat::handle_fatal_collision\n   3: ferris_space_defender::engine::hull_breach\n   4: <FerrisShip as SpaceCraft>::on_destroyed")
-                                            .size(9.0)
-                                            .monospace()
-                                            .color(egui::Color32::from_rgb(140, 150, 170)),
-                                    );
-                                    ui.add_space(3.0);
-                                    ui.label(
-                                        egui::RichText::new("note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace")
-                                            .size(9.0)
-                                            .monospace()
-                                            .color(egui::Color32::from_rgb(245, 195, 65)),
-                                    );
+                                    if let Some(tex_id) = contexts.image_id(rank_tex) {
+                                        ui.image(egui::SizedTexture::new(tex_id, egui::vec2(160.0, 210.0)));
+                                    }
+                                    ui.add_space(6.0);
+                                    ui.label(egui::RichText::new(rank_name).size(16.0).color(rank_color).strong());
+                                    ui.label(egui::RichText::new(format!("PUNTAJE FINAL: {} PTS", current_player.score)).size(18.0).color(egui::Color32::YELLOW).strong());
                                 });
                             });
 
-                        ui.add_space(8.0);
+                        ui.add_space(12.0);
 
-                        ui.label(
-                            egui::RichText::new(format!("Piloto: {}", current_player.name))
-                                .size(16.0)
-                                .color(egui::Color32::WHITE),
-                        );
-
-                        ui.label(
-                            egui::RichText::new(format!("PUNTAJE FINAL: {} PUNTOS", current_player.score))
-                                .size(22.0)
-                                .color(egui::Color32::from_rgb(255, 215, 0))
-                                .strong(),
-                        );
-
-                        ui.add_space(10.0);
-
-                        let (rank, rank_title, rank_color) = if current_player.score >= 3500 {
-                            ("RANGO S", "MAESTRO DE RUST / LEYENDA DEL VACIO", egui::Color32::from_rgb(255, 215, 0))
-                        } else if current_player.score >= 2000 {
-                            ("RANGO A", "OFICIAL SENIOR DE SISTEMAS", egui::Color32::from_rgb(100, 240, 255))
-                        } else if current_player.score >= 1000 {
-                            ("RANGO B", "PILOTO DE COMBATE CERTIFICADO", egui::Color32::from_rgb(120, 255, 120))
-                        } else {
-                            ("RANGO C", "CADETE EN PERIODO DE PRUEBAS", egui::Color32::from_rgb(200, 200, 200))
-                        };
-
-                        egui::Frame::default()
-                            .fill(egui::Color32::from_rgb(20, 16, 28))
-                            .stroke(egui::Stroke::new(1.5f32, rank_color))
-                            .rounding(8.0)
-                            .inner_margin(12.0)
-                            .show(ui, |ui| {
-                                ui.label(
-                                    egui::RichText::new(rank)
-                                        .size(20.0)
-                                        .color(rank_color)
-                                        .strong(),
-                                );
-                                ui.label(
-                                    egui::RichText::new(rank_title)
-                                        .size(11.0)
-                                        .color(egui::Color32::from_rgb(200, 200, 220)),
-                                );
-                                ui.add_space(6.0);
-                                ui.horizontal(|ui| {
-                                    ui.label(egui::RichText::new(format!("Nave: {}", current_player.ship_class.short_name())).size(12.0).color(egui::Color32::from_rgb(175, 215, 255)));
-                                    ui.label(egui::RichText::new("|").color(egui::Color32::GRAY));
-                                    ui.label(egui::RichText::new(format!("Bajas: {}", current_player.enemies_killed)).size(12.0).color(egui::Color32::WHITE));
-                                    ui.label(egui::RichText::new("|").color(egui::Color32::GRAY));
-                                    ui.label(egui::RichText::new(format!("Max Combo: x{}", current_player.max_combo)).size(12.0).color(egui::Color32::from_rgb(255, 215, 0)).strong());
-                                    ui.label(egui::RichText::new("|").color(egui::Color32::GRAY));
-                                    ui.label(egui::RichText::new(format!("Tiempo: {:.0}s", current_player.time_elapsed)).size(12.0).color(egui::Color32::WHITE));
-                                    ui.label(egui::RichText::new("|").color(egui::Color32::GRAY));
-                                    ui.label(egui::RichText::new(format!("Ola: {}", current_player.wave)).size(12.0).color(egui::Color32::WHITE));
-                                });
-                            });
-
-                        ui.add_space(14.0);
-
-                        if ui
-                            .add(
-                                egui::Button::new(
-                                    egui::RichText::new("SIGUIENTE CONCURSANTE (Nuevo intento)")
-                                        .size(14.0)
-                                        .color(egui::Color32::WHITE)
-                                        .strong(),
-                                )
-                                .min_size(egui::vec2(260.0, 42.0))
-                                .fill(egui::Color32::from_rgb(30, 140, 230)),
+                        let btn_retry = ui.add(
+                            egui::Button::new(
+                                egui::RichText::new("NUEVO INTENTO")
+                                    .size(15.0)
+                                    .color(egui::Color32::WHITE)
+                                    .strong(),
                             )
-                            .clicked()
-                        {
+                            .min_size(egui::vec2(280.0, 42.0))
+                            .fill(egui::Color32::from_rgb(30, 140, 230)),
+                        );
+
+                        if btn_retry.clicked() {
                             next_state.set(AppState::NameInput);
                         }
 
-                        ui.add_space(18.0);
-
+                        ui.add_space(16.0);
                         ui.heading(
-                            egui::RichText::new("CLASIFICACION GENERAL DEL EVENTO")
-                                .size(15.0)
-                                .color(egui::Color32::from_rgb(255, 200, 50)),
+                            egui::RichText::new("TABLA DE CLASIFICACION")
+                                .size(14.0)
+                                .color(egui::Color32::YELLOW),
                         );
-                        ui.add_space(6.0);
+                        ui.add_space(4.0);
 
                         egui::Frame::default()
-                            .fill(egui::Color32::from_rgb(25, 18, 26))
+                            .fill(egui::Color32::from_rgb(22, 16, 24))
                             .rounding(8.0)
-                            .inner_margin(10.0)
+                            .inner_margin(8.0)
                             .show(ui, |ui| {
-                                egui::Grid::new("gameover_leaderboard_grid")
-                                    .striped(true)
-                                    .min_col_width(65.0)
-                                    .show(ui, |ui| {
-                                        ui.label("Pos");
-                                        ui.label("Estudiante");
-                                        ui.label("Puntaje");
-                                        ui.label("Oleada");
+                                egui::Grid::new("gameover_grid").striped(true).min_col_width(65.0).show(ui, |ui| {
+                                    for (idx, entry) in leaderboard.entries.iter().take(8).enumerate() {
+                                        ui.label(format!("{}.", idx + 1));
+                                        ui.label(&entry.name);
+                                        ui.label(format!("{} pts", entry.score));
+                                        ui.label(format!("Ola {}", entry.wave));
                                         ui.end_row();
-
-                                        for (idx, entry) in leaderboard.entries.iter().take(10).enumerate() {
-                                            let is_current = entry.name == current_player.name && entry.score == current_player.score;
-                                            let name_text = if is_current {
-                                                egui::RichText::new(&entry.name).color(egui::Color32::GREEN).strong()
-                                            } else {
-                                                egui::RichText::new(&entry.name).color(egui::Color32::WHITE)
-                                            };
-
-                                            ui.label(format!("{}.", idx + 1));
-                                            ui.label(name_text);
-                                            ui.label(format!("{} pts", entry.score));
-                                            ui.label(format!("Ola {}", entry.wave));
-                                            ui.end_row();
-                                        }
-                                    });
+                                    }
+                                });
                             });
                         ui.add_space(20.0);
                     });
