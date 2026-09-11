@@ -1,11 +1,12 @@
 [package]
 name = "ferris_space_defender"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [package.metadata.android]
 package = "com.ferriskey.spacedefender"
 label = "Ferris Defender"
+assets = "assets"
 target_sdk_version = 34
 min_sdk_version = 24
 
@@ -20,17 +21,35 @@ crate-type = ["cdylib", "rlib"]
 path = "src/lib.rs"
 
 [dependencies]
+bevy = { version = "0.14", default-features = false, features = [
+    "animation",
+    "bevy_asset",
+    "bevy_color",
+    "bevy_winit",
+    "bevy_core_pipeline",
+    "bevy_render",
+    "bevy_sprite",
+    "bevy_state",
+    "bevy_text",
+    "bevy_ui",
+    "multi_threaded",
+    "png",
+] }
+bevy_egui = "0.28"
 rand = "0.8"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
-eframe = { version = "0.31", features = ["default_fonts", "glow", "x11", "wayland"] }
+bevy = { version = "0.14", default-features = false, features = [
+    "x11",
+] }
 
 [target.'cfg(target_os = "android")'.dependencies]
 android-activity = { version = "0.6", features = ["native-activity"] }
-eframe = { version = "0.31", default-features = false, features = ["default_fonts", "glow", "android-native-activity"] }
 
 [profile.release]
-opt-level = "z"
+opt-level = 3
 lto = true
 codegen-units = 1
 panic = "abort"
