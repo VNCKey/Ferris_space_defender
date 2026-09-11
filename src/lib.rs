@@ -2140,7 +2140,7 @@ fn ui_name_input(
                 .auto_shrink([false, false])
                 .show(ui, |ui| {
                     ui.vertical_centered(|ui| {
-                        ui.add_space(10.0);
+                        ui.add_space(45.0);
                         ui.heading(
                             egui::RichText::new("FERRIS SPACE DEFENDER")
                                 .size(24.0)
@@ -2416,7 +2416,16 @@ fn ui_playing_hud(
     let ctx = contexts.ctx_mut();
 
     egui::TopBottomPanel::top("top_hud")
-        .frame(egui::Frame::default().fill(egui::Color32::from_rgba_unmultiplied(2, 2, 4, 210)))
+        .frame(
+            egui::Frame::default()
+                .fill(egui::Color32::from_rgba_unmultiplied(2, 2, 4, 220))
+                .inner_margin(egui::Margin {
+                    left: 10.0,
+                    right: 10.0,
+                    top: 45.0,
+                    bottom: 8.0,
+                }),
+        )
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.label(
@@ -2563,7 +2572,7 @@ fn ui_game_over(
                 .auto_shrink([false, false])
                 .show(ui, |ui| {
                     ui.vertical_centered(|ui| {
-                        ui.add_space(15.0);
+                        ui.add_space(45.0);
                         ui.heading(
                             egui::RichText::new("NAVE DESTRUIDA")
                                 .size(24.0)
