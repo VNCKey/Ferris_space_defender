@@ -2312,16 +2312,14 @@ fn ui_skill_draft(
     mut skill_draft: ResMut<SkillDraftOptions>,
     assets: Res<GameAssets>,
 ) {
-    if !skill_draft.is_active {
-        return;
+    let mut skill_tex_map = HashMap::new();
+    for (&skill, handle) in &assets.skill_textures {
+        let tid = contexts.add_image(handle.clone_weak());
+        skill_tex_map.insert(skill, tid);
     }
 
-    let mut skill_tex_map = HashMap::new();
-    for &skill in &skill_draft.options {
-        if let Some(h) = assets.skill_textures.get(&skill) {
-            let tid = contexts.add_image(h.clone_weak());
-            skill_tex_map.insert(skill, tid);
-        }
+    if !skill_draft.is_active {
+        return;
     }
 
     let ctx = contexts.ctx_mut();
@@ -2406,11 +2404,9 @@ fn ui_playing_hud(
     query_enemy_lasers: Query<Entity, With<EnemyLaser>>,
 ) {
     let mut skill_tex_map = HashMap::new();
-    for &skill in &current_player.active_skills {
-        if let Some(h) = assets.skill_textures.get(&skill) {
-            let tid = contexts.add_image(h.clone_weak());
-            skill_tex_map.insert(skill, tid);
-        }
+    for (&skill, handle) in &assets.skill_textures {
+        let tid = contexts.add_image(handle.clone_weak());
+        skill_tex_map.insert(skill, tid);
     }
 
     let ctx = contexts.ctx_mut();
@@ -2427,57 +2423,65 @@ fn ui_playing_hud(
                 }),
         )
         .show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.label(
-                    egui::RichText::new(format!("PILOTO: {} [{}]", current_player.name, current_player.ship_class.badge()))
-                        .color(egui::Color32::WHITE)
-                        .strong(),
-                );
+            ui.vertical(|ui| {
+                // Linea 1: Piloto, Puntaje y Oleada
+                ui.horizontal(|ui| {
+                    ui.label(
+                        egui::RichText::new(format!("PILOTO: {} [{}]", current_player.name, current_player.ship_class.badge()))
+                            .color(egui::Color32::WHITE)
+                            .strong(),
+                    );
+                    ui.add_space(8.0);
+                    ui.label(
+                        egui::RichText::new(format!("PTS: {}", current_player.score))
+                            .color(egui::Color32::from_rgb(255, 215, 50))
+                            .strong()
+                            .size(14.0),
+                    );
+                    ui.add_space(8.0);
+                    ui.label(
+                        egui::RichText::new(format!("OLA: {}", current_player.wave))
+                            .color(egui::Color32::LIGHT_BLUE)
+                            .strong(),
+                    );
+                });
 
-                ui.separator();
+                ui.add_space(4.0);
 
-                ui.label(
-                    egui::RichText::new(format!("PTS: {}", current_player.score))
-                        .color(egui::Color32::from_rgb(255, 215, 50))
-                        .strong()
-                        .size(15.0),
-                );
-
-                ui.separator();
-                ui.label(format!("OLA: {}", current_player.wave));
-
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                // Linea 2: Barras de Vida (HP) y Escudo (ESC) ordenadas de forma independiente
+                ui.horizontal(|ui| {
                     let health_frac = (current_player.health / current_player.max_health).clamp(0.0, 1.0);
                     let bar_color = if health_frac > 0.5 { egui::Color32::GREEN } else if health_frac > 0.25 { egui::Color32::YELLOW } else { egui::Color32::RED };
-                    ui.label(format!("HP {:.0}%", health_frac * 100.0));
-                    ui.add(egui::ProgressBar::new(health_frac).fill(bar_color).desired_width(55.0));
+                    ui.label(egui::RichText::new(format!("HP {:.0}%", health_frac * 100.0)).size(11.0).color(bar_color).strong());
+                    ui.add(egui::ProgressBar::new(health_frac).fill(bar_color).desired_width(65.0));
 
                     if current_player.shield > 0.0 {
+                        ui.add_space(8.0);
                         let shield_frac = (current_player.shield / current_player.max_shield).clamp(0.0, 1.0);
-                        ui.label(format!("ESC {:.0}", current_player.shield));
-                        ui.add(egui::ProgressBar::new(shield_frac).fill(egui::Color32::from_rgb(80, 200, 255)).desired_width(45.0));
+                        ui.label(egui::RichText::new(format!("ESC {:.0}", current_player.shield)).size(11.0).color(egui::Color32::from_rgb(80, 200, 255)).strong());
+                        ui.add(egui::ProgressBar::new(shield_frac).fill(egui::Color32::from_rgb(80, 200, 255)).desired_width(55.0));
                     }
                 });
-            });
 
-            // Status message
-            if current_player.status_timer > 0.0 {
-                ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new(&current_player.status_message).color(egui::Color32::YELLOW).strong());
-                });
-            }
-
-            // Barra de vida de Jefe
-            for (_, enemy, _) in query_enemies.iter() {
-                if enemy.is_boss {
-                    let boss_frac = (enemy.health / enemy.max_health).clamp(0.0, 1.0);
-                    let bar_color = if enemy.is_enraged { egui::Color32::RED } else { egui::Color32::from_rgb(255, 140, 0) };
-                    ui.horizontal(|ui| {
-                        ui.label(egui::RichText::new("JEFE BORROW CHECKER:").color(bar_color).strong());
-                        ui.add(egui::ProgressBar::new(boss_frac).fill(bar_color).desired_width(180.0));
-                    });
+                // Status message
+                if current_player.status_timer > 0.0 {
+                    ui.add_space(2.0);
+                    ui.label(egui::RichText::new(&current_player.status_message).color(egui::Color32::YELLOW).size(11.5).strong());
                 }
-            }
+
+                // Barra de vida de Jefe
+                for (_, enemy, _) in query_enemies.iter() {
+                    if enemy.is_boss {
+                        ui.add_space(2.0);
+                        let boss_frac = (enemy.health / enemy.max_health).clamp(0.0, 1.0);
+                        let bar_color = if enemy.is_enraged { egui::Color32::RED } else { egui::Color32::from_rgb(255, 140, 0) };
+                        ui.horizontal(|ui| {
+                            ui.label(egui::RichText::new("JEFE:").color(bar_color).size(12.0).strong());
+                            ui.add(egui::ProgressBar::new(boss_frac).fill(bar_color).desired_width(170.0));
+                        });
+                    }
+                }
+            });
         });
 
     // Panel Inferior Elevado (Safe Area para la barra de navegación de Android)
