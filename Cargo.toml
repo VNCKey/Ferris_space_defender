@@ -24,6 +24,7 @@ path = "src/lib.rs"
 bevy = { version = "0.14", default-features = false, features = [
     "animation",
     "bevy_asset",
+    "bevy_audio",
     "bevy_color",
     "bevy_winit",
     "bevy_core_pipeline",
@@ -34,6 +35,7 @@ bevy = { version = "0.14", default-features = false, features = [
     "bevy_ui",
     "multi_threaded",
     "png",
+    "vorbis",
 ] }
 bevy_egui = "0.28"
 rand = "0.8"

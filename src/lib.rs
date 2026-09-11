@@ -154,6 +154,13 @@ pub struct GameAssets {
     pub regular_enemies: Vec<Handle<Image>>,
     pub boss_enemies: Vec<Handle<Image>>,
     pub planets: Vec<Handle<Image>>,
+    // Efectos de Sonido
+    pub snd_player_laser: Handle<AudioSource>,
+    pub snd_player_death: Handle<AudioSource>,
+    pub snd_player_damage: Handle<AudioSource>,
+    pub snd_enemy_death: Handle<AudioSource>,
+    pub snd_boss_death: Handle<AudioSource>,
+    pub snd_powerup_pickup: Handle<AudioSource>,
 }
 
 #[derive(Resource)]
@@ -230,6 +237,14 @@ pub struct ExplosionParticle {
     pub initial_size: f32,
 }
 
+
+fn play_sound(commands: &mut Commands, source: Handle<AudioSource>, volume: f32) {
+    commands.spawn(AudioBundle {
+        source,
+        settings: PlaybackSettings::DESPAWN.with_volume(bevy::audio::Volume::new(volume)),
+    });
+}
+
 // ============================================================================
 // Inicio y Setup Principal
 // ============================================================================
@@ -302,6 +317,14 @@ fn setup_app(
     let powerup_health = asset_server.load("textures/powerups/health.png");
     let powerup_nuke = asset_server.load("textures/powerups/nuke.png");
 
+    // Cargar efectos de sonido en formato OGG
+    let snd_player_laser = asset_server.load("audio/laser_player.ogg");
+    let snd_player_death = asset_server.load("audio/player_death.ogg");
+    let snd_player_damage = asset_server.load("audio/player_damage.ogg");
+    let snd_enemy_death = asset_server.load("audio/enemy_death.ogg");
+    let snd_boss_death = asset_server.load("audio/boss_death.ogg");
+    let snd_powerup_pickup = asset_server.load("audio/powerup_pickup.ogg");
+
     // 7 Enemigos regulares (enemy_1 a enemy_7)
     let mut regular_enemies = Vec::new();
     for i in 1..=7 {
@@ -330,6 +353,12 @@ fn setup_app(
         regular_enemies,
         boss_enemies,
         planets,
+        snd_player_laser,
+        snd_player_death,
+        snd_player_damage,
+        snd_enemy_death,
+        snd_boss_death,
+        snd_powerup_pickup,
     });
 
     // Campo de estrellas cósmicas
@@ -557,6 +586,7 @@ fn shield_visual_system(
 fn player_shoot_system(
     mut commands: Commands,
     time: Res<Time>,
+    assets: Res<GameAssets>,
     mut timers: ResMut<GameTimers>,
     mut current_player: ResMut<CurrentPlayer>,
     query: Query<&Transform, With<Player>>,
@@ -569,6 +599,7 @@ fn player_shoot_system(
 
     if timers.player_shoot.just_finished() {
         if let Ok(player_tr) = query.get_single() {
+            play_sound(&mut commands, assets.snd_player_laser.clone(), 0.22);
             let pos = player_tr.translation;
 
             if current_player.triple_shot_timer > 0.0 {
@@ -752,6 +783,7 @@ fn boss_spawn_system(
 fn enemy_movement_system(
     mut commands: Commands,
     time: Res<Time>,
+    assets: Res<GameAssets>,
     mut current_player: ResMut<CurrentPlayer>,
     mut query: Query<(Entity, &mut Transform, &mut Enemy)>,
 ) {
@@ -823,7 +855,7 @@ fn enemy_movement_system(
 
             // Si sobrepasa la parte inferior, daña al jugador
             if transform.translation.y < -430.0 {
-                apply_damage_to_player(&mut current_player, 15.0);
+                apply_damage_to_player(&mut commands, &assets, &mut current_player, 15.0);
                 commands.entity(entity).despawn();
             }
         }
@@ -865,6 +897,7 @@ fn difficulty_and_wave_system(
 fn powerup_system(
     mut commands: Commands,
     time: Res<Time>,
+    assets: Res<GameAssets>,
     mut current_player: ResMut<CurrentPlayer>,
     mut query_powerups: Query<(Entity, &mut Transform, &PowerUpItem)>,
     query_player: Query<&Transform, (With<Player>, Without<PowerUpItem>)>,
@@ -907,6 +940,7 @@ fn powerup_system(
                         current_player.status_message = "BOMBA EMP DETONADA".to_string();
                     }
                 }
+                play_sound(&mut commands, assets.snd_powerup_pickup.clone(), 0.75);
                 current_player.status_timer = 2.5;
                 spawn_spark(&mut commands, item_pos);
                 commands.entity(p_entity).despawn();
@@ -950,20 +984,26 @@ fn spawn_powerup_item(commands: &mut Commands, assets: &GameAssets, pos: Vec2, k
 // Colisiones
 // ============================================================================
 
-fn apply_damage_to_player(current_player: &mut ResMut<CurrentPlayer>, damage: f32) {
+fn apply_damage_to_player(
+    commands: &mut Commands,
+    assets: &GameAssets,
+    current_player: &mut ResMut<CurrentPlayer>,
+    damage: f32,
+) {
+    play_sound(commands, assets.snd_player_damage.clone(), 0.65);
     if current_player.shield > 0.0 {
-        current_player.shield_hit_timer = 0.28; // Activa destello del escudo de impacto
+        current_player.shield_hit_timer = 0.28;
         if current_player.shield >= damage {
             current_player.shield -= damage;
         } else {
             let leftover = damage - current_player.shield;
             current_player.shield = 0.0;
             current_player.health -= leftover;
-            current_player.hull_hit_timer = 0.18; // Destello de daño al casco
+            current_player.hull_hit_timer = 0.18;
         }
     } else {
         current_player.health -= damage;
-        current_player.hull_hit_timer = 0.18; // Destello de daño al casco
+        current_player.hull_hit_timer = 0.18;
     }
 }
 
@@ -1012,8 +1052,11 @@ fn collision_system(
                     }
 
                     if enemy.is_boss {
+                        play_sound(&mut commands, assets.snd_boss_death.clone(), 0.90);
                         current_player.status_message = "JEFE DERROTADO (+1500 PTS)".to_string();
                         current_player.status_timer = 3.0;
+                    } else {
+                        play_sound(&mut commands, assets.snd_enemy_death.clone(), 0.55);
                     }
 
                     commands.entity(enemy_entity).despawn();
@@ -1033,7 +1076,7 @@ fn collision_system(
             let el_pos = elaser_tr.translation.truncate();
             if p_pos.distance(el_pos) < 32.0 {
                 commands.entity(elaser_entity).despawn();
-                apply_damage_to_player(&mut current_player, 16.0);
+                apply_damage_to_player(&mut commands, &assets, &mut current_player, 16.0);
                 spawn_spark(&mut commands, el_pos);
             }
         }
@@ -1043,7 +1086,7 @@ fn collision_system(
             let e_pos = enemy_tr.translation.truncate();
             if p_pos.distance(e_pos) < (32.0 + enemy.size * 0.35) {
                 let dmg = if enemy.is_boss { 45.0 } else { 24.0 };
-                apply_damage_to_player(&mut current_player, dmg);
+                apply_damage_to_player(&mut commands, &assets, &mut current_player, dmg);
                 spawn_bevy_explosion(&mut commands, e_pos);
                 if !enemy.is_boss {
                     commands.entity(enemy_entity).despawn();
@@ -1055,6 +1098,7 @@ fn collision_system(
     // Comprobar Game Over
     if current_player.health <= 0.0 {
         current_player.health = 0.0;
+        play_sound(&mut commands, assets.snd_player_death.clone(), 0.90);
         leaderboard.add_score(
             current_player.name.clone(),
             current_player.score,
