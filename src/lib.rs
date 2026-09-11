@@ -2124,6 +2124,7 @@ fn ui_name_input(
     leaderboard: Res<Leaderboard>,
     assets: Res<GameAssets>,
     mut next_state: ResMut<NextState<AppState>>,
+    mut windows: Query<&mut Window>,
 ) {
     let card_defensor_id = contexts.add_image(assets.card_defensor.clone_weak());
     let card_mago_id = contexts.add_image(assets.card_mago.clone_weak());
@@ -2154,7 +2155,7 @@ fn ui_name_input(
                         );
                         ui.add_space(10.0);
 
-                        // Card Nombre del Piloto
+                        // Card Nombre del Piloto con Teclado Táctil Nativo
                         egui::Frame::default()
                             .fill(egui::Color32::from_rgb(16, 24, 40))
                             .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(40, 80, 130)))
@@ -2164,13 +2165,31 @@ fn ui_name_input(
                                 ui.set_max_width(340.0);
                                 ui.label(egui::RichText::new("IDENTIFICADOR DEL PILOTO").size(12.0).color(egui::Color32::LIGHT_BLUE).strong());
                                 ui.add_space(4.0);
-                                ui.horizontal(|ui| {
-                                    let name_text = if current_player.name.is_empty() { "Piloto_Rust".to_string() } else { current_player.name.clone() };
-                                    ui.label(egui::RichText::new(name_text).size(16.0).color(egui::Color32::YELLOW).strong());
-                                });
+
+                                let text_edit_response = ui.add(
+                                    egui::TextEdit::singleline(&mut current_player.name)
+                                        .hint_text("Toca para escribir tu nombre...")
+                                        .text_color(egui::Color32::YELLOW)
+                                        .font(egui::FontId::proportional(16.0))
+                                        .margin(egui::vec2(8.0, 6.0))
+                                        .min_size(egui::vec2(220.0, 36.0)),
+                                );
+
+                                if let Ok(mut window) = windows.get_single_mut() {
+                                    if text_edit_response.has_focus() {
+                                        window.ime_enabled = true;
+                                        window.ime_position = Vec2::new(
+                                            text_edit_response.rect.left(),
+                                            text_edit_response.rect.bottom(),
+                                        );
+                                    } else {
+                                        window.ime_enabled = false;
+                                    }
+                                }
+
                                 ui.add_space(4.0);
                                 ui.horizontal(|ui| {
-                                    if ui.button("Borrar").clicked() { current_player.name.pop(); }
+                                    if ui.button("Borrar").clicked() { current_player.name.clear(); }
                                     if ui.button("Aleatorio").clicked() {
                                         let n = ["Ferris_Pro", "Rustacean", "Async_King", "Cargo_Runner", "Borrow_God"];
                                         let mut rng = rand::thread_rng();
