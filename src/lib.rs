@@ -1384,7 +1384,7 @@ fn enemy_movement_system(
                 let pos = transform.translation;
 
                 if enemy.is_enraged {
-                    for angle in &[-0.4, -0.2, 0.0, 0.2, 0.4] {
+                    for &angle in &[-0.4_f32, -0.2, 0.0, 0.2, 0.4] {
                         let vx = angle.sin() * 320.0;
                         let vy = -angle.cos() * 320.0;
                         commands.spawn((
@@ -2062,6 +2062,11 @@ fn ui_name_input(
     assets: Res<GameAssets>,
     mut next_state: ResMut<NextState<AppState>>,
 ) {
+    let card_defensor_id = contexts.image_id(&assets.card_defensor);
+    let card_mago_id = contexts.image_id(&assets.card_mago);
+    let card_asesino_id = contexts.image_id(&assets.card_asesino);
+    let card_artillero_id = contexts.image_id(&assets.card_artillero);
+
     let ctx = contexts.ctx_mut();
 
     egui::CentralPanel::default()
@@ -2089,7 +2094,7 @@ fn ui_name_input(
                         // Card Nombre del Piloto
                         egui::Frame::default()
                             .fill(egui::Color32::from_rgb(16, 24, 40))
-                            .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(40, 80, 130)))
+                            .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(40, 80, 130)))
                             .rounding(8.0)
                             .inner_margin(10.0)
                             .show(ui, |ui| {
@@ -2127,26 +2132,26 @@ fn ui_name_input(
 
                         // Lista Vertical Adaptable de 4 Clases
                         let classes = [
-                            (ShipClass::Defensor, &assets.card_defensor, &assets.ship_defensor, egui::Color32::from_rgb(255, 190, 40)),
-                            (ShipClass::Mago, &assets.card_mago, &assets.ship_mago, egui::Color32::from_rgb(40, 200, 255)),
-                            (ShipClass::Asesino, &assets.card_asesino, &assets.ship_asesino, egui::Color32::from_rgb(50, 255, 120)),
-                            (ShipClass::Artillero, &assets.card_artillero, &assets.ship_artillero, egui::Color32::from_rgb(255, 80, 50)),
+                            (ShipClass::Defensor, card_defensor_id, &assets.ship_defensor, egui::Color32::from_rgb(255, 190, 40)),
+                            (ShipClass::Mago, card_mago_id, &assets.ship_mago, egui::Color32::from_rgb(40, 200, 255)),
+                            (ShipClass::Asesino, card_asesino_id, &assets.ship_asesino, egui::Color32::from_rgb(50, 255, 120)),
+                            (ShipClass::Artillero, card_artillero_id, &assets.ship_artillero, egui::Color32::from_rgb(255, 80, 50)),
                         ];
 
-                        for (s_class, card_tex, _ship_tex, border_color) in classes {
+                        for (s_class, card_tex_id, _ship_tex, border_color) in classes {
                             let is_selected = current_player.ship_class == s_class;
 
                             egui::Frame::default()
                                 .fill(if is_selected { egui::Color32::from_rgb(24, 38, 65) } else { egui::Color32::from_rgb(14, 18, 30) })
-                                .stroke(egui::Stroke::new(if is_selected { 2.5 } else { 1.0 }, if is_selected { border_color } else { egui::Color32::DARK_GRAY }))
+                                .stroke(egui::Stroke::new(if is_selected { 2.5_f32 } else { 1.0_f32 }, if is_selected { border_color } else { egui::Color32::DARK_GRAY }))
                                 .rounding(10.0)
                                 .inner_margin(12.0)
                                 .show(ui, |ui| {
                                     ui.set_max_width(340.0);
                                     ui.vertical(|ui| {
                                         ui.horizontal(|ui| {
-                                            if let Some(tex_id) = contexts.image_id(card_tex) {
-                                                ui.image(egui::SizedTexture::new(tex_id, egui::vec2(68.0, 95.0)));
+                                            if let Some(tex_id) = card_tex_id {
+                                                ui.image((tex_id, egui::vec2(68.0, 95.0)));
                                             }
                                             ui.vertical(|ui| {
                                                 ui.label(egui::RichText::new(s_class.name()).size(14.0).color(border_color).strong());
@@ -2235,6 +2240,15 @@ fn ui_skill_draft(
     assets: Res<GameAssets>,
     mut next_state: ResMut<NextState<AppState>>,
 ) {
+    let mut skill_tex_map = HashMap::new();
+    for &skill in &skill_draft.options {
+        if let Some(h) = assets.skill_textures.get(&skill) {
+            if let Some(tid) = contexts.image_id(h) {
+                skill_tex_map.insert(skill, tid);
+            }
+        }
+    }
+
     let ctx = contexts.ctx_mut();
 
     egui::CentralPanel::default()
@@ -2261,17 +2275,15 @@ fn ui_skill_draft(
                         for &skill in &skill_draft.options {
                             egui::Frame::default()
                                 .fill(egui::Color32::from_rgb(16, 26, 45))
-                                .stroke(egui::Stroke::new(1.5, egui::Color32::from_rgb(0, 200, 255)))
+                                .stroke(egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(0, 200, 255)))
                                 .rounding(10.0)
                                 .inner_margin(12.0)
                                 .show(ui, |ui| {
                                     ui.set_max_width(340.0);
                                     ui.vertical(|ui| {
                                         ui.horizontal(|ui| {
-                                            if let Some(tex_handle) = assets.skill_textures.get(&skill) {
-                                                if let Some(tex_id) = contexts.image_id(tex_handle) {
-                                                    ui.image(egui::SizedTexture::new(tex_id, egui::vec2(65.0, 90.0)));
-                                                }
+                                            if let Some(&tex_id) = skill_tex_map.get(&skill) {
+                                                ui.image((tex_id, egui::vec2(65.0, 90.0)));
                                             }
                                             ui.vertical(|ui| {
                                                 let tag_color = if skill.is_active() { egui::Color32::from_rgb(255, 80, 255) } else { egui::Color32::from_rgb(80, 255, 140) };
@@ -2428,7 +2440,7 @@ fn ui_playing_hud(
                             )
                             .min_size(egui::vec2(110.0, 46.0))
                             .fill(fill_color)
-                            .stroke(egui::Stroke::new(1.5, if is_cd { egui::Color32::DARK_GRAY } else { egui::Color32::YELLOW })),
+                            .stroke(egui::Stroke::new(1.5_f32, if is_cd { egui::Color32::DARK_GRAY } else { egui::Color32::YELLOW })),
                         );
 
                         if btn.clicked() && !is_cd {
@@ -2469,6 +2481,11 @@ fn ui_game_over(
     assets: Res<GameAssets>,
     mut next_state: ResMut<NextState<AppState>>,
 ) {
+    let rank_s_id = contexts.image_id(&assets.rank_s);
+    let rank_a_id = contexts.image_id(&assets.rank_a);
+    let rank_b_id = contexts.image_id(&assets.rank_b);
+    let rank_c_id = contexts.image_id(&assets.rank_c);
+
     let ctx = contexts.ctx_mut();
 
     egui::CentralPanel::default()
@@ -2488,26 +2505,26 @@ fn ui_game_over(
                         ui.add_space(6.0);
 
                         // Medalla de Rango Ganada
-                        let (rank_name, rank_color, rank_tex) = if current_player.score >= 3500 {
-                            ("🥇 RANGO S: LEYENDA DE RUST", egui::Color32::from_rgb(255, 215, 0), &assets.rank_s)
+                        let (rank_name, rank_color, rank_tex_id) = if current_player.score >= 3500 {
+                            ("🥇 RANGO S: LEYENDA DE RUST", egui::Color32::from_rgb(255, 215, 0), rank_s_id)
                         } else if current_player.score >= 2000 {
-                            ("🥈 RANGO A: COMANDANTE SENIOR", egui::Color32::from_rgb(100, 240, 255), &assets.rank_a)
+                            ("🥈 RANGO A: COMANDANTE SENIOR", egui::Color32::from_rgb(100, 240, 255), rank_a_id)
                         } else if current_player.score >= 1000 {
-                            ("🥉 RANGO B: PILOTO CERTIFICADO", egui::Color32::from_rgb(120, 255, 120), &assets.rank_b)
+                            ("🥉 RANGO B: PILOTO CERTIFICADO", egui::Color32::from_rgb(120, 255, 120), rank_b_id)
                         } else {
-                            ("🎖️ RANGO C: CADETE SPACE", egui::Color32::from_rgb(200, 200, 200), &assets.rank_c)
+                            ("🎖️ RANGO C: CADETE SPACE", egui::Color32::from_rgb(200, 200, 200), rank_c_id)
                         };
 
                         egui::Frame::default()
                             .fill(egui::Color32::from_rgb(18, 14, 26))
-                            .stroke(egui::Stroke::new(2.0, rank_color))
+                            .stroke(egui::Stroke::new(2.0_f32, rank_color))
                             .rounding(10.0)
                             .inner_margin(12.0)
                             .show(ui, |ui| {
                                 ui.set_max_width(340.0);
                                 ui.vertical(|ui| {
-                                    if let Some(tex_id) = contexts.image_id(rank_tex) {
-                                        ui.image(egui::SizedTexture::new(tex_id, egui::vec2(160.0, 210.0)));
+                                    if let Some(tex_id) = rank_tex_id {
+                                        ui.image((tex_id, egui::vec2(160.0, 210.0)));
                                     }
                                     ui.add_space(6.0);
                                     ui.label(egui::RichText::new(rank_name).size(16.0).color(rank_color).strong());
