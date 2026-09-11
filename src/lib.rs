@@ -2419,21 +2419,15 @@ fn ui_playing_hud(
         )
         .show(ctx, |ui| {
             ui.vertical(|ui| {
-                // Linea 1: Piloto, Puntaje y Oleada
+                // Linea 1: Puntaje y Oleada
                 ui.horizontal(|ui| {
-                    ui.label(
-                        egui::RichText::new(format!("PILOTO: {} [{}]", current_player.name, current_player.ship_class.badge()))
-                            .color(egui::Color32::WHITE)
-                            .strong(),
-                    );
-                    ui.add_space(8.0);
                     ui.label(
                         egui::RichText::new(format!("PTS: {}", current_player.score))
                             .color(egui::Color32::from_rgb(255, 215, 50))
                             .strong()
                             .size(14.0),
                     );
-                    ui.add_space(8.0);
+                    ui.add_space(12.0);
                     ui.label(
                         egui::RichText::new(format!("OLA: {}", current_player.wave))
                             .color(egui::Color32::LIGHT_BLUE)
@@ -2457,12 +2451,6 @@ fn ui_playing_hud(
                         ui.add(egui::ProgressBar::new(shield_frac).fill(egui::Color32::from_rgb(80, 200, 255)).desired_width(55.0));
                     }
                 });
-
-                // Status message
-                if current_player.status_timer > 0.0 {
-                    ui.add_space(2.0);
-                    ui.label(egui::RichText::new(&current_player.status_message).color(egui::Color32::YELLOW).size(11.5).strong());
-                }
 
                 // Barra de vida de Jefe
                 for (_, enemy, _) in query_enemies.iter() {
