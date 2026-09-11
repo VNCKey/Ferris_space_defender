@@ -2318,97 +2318,68 @@ fn ui_skill_draft(
     let ctx = contexts.ctx_mut();
 
     egui::CentralPanel::default()
-        .frame(egui::Frame::default().fill(egui::Color32::from_rgba_unmultiplied(4, 8, 18, 240)))
+        .frame(egui::Frame::default().fill(egui::Color32::from_rgba_unmultiplied(0, 0, 0, 160)))
         .show(ctx, |ui| {
-            egui::ScrollArea::vertical()
-                .auto_shrink([false, false])
-                .show(ui, |ui| {
-                    ui.vertical_centered(|ui| {
-                        ui.add_space(20.0);
-                        ui.heading(
-                            egui::RichText::new("🏆 ¡JEFE SUPREMO DERROTADO!")
-                                .size(22.0)
-                                .color(egui::Color32::from_rgb(255, 215, 0))
-                                .strong(),
-                        );
-                        ui.label(
-                            egui::RichText::new("Selecciona 1 Carta de Habilidad Rogue-lite para mejorar tu Nave:")
-                                .size(13.0)
-                                .color(egui::Color32::from_rgb(180, 220, 255)),
-                        );
-                        ui.add_space(14.0);
+            let avail_w = ui.available_width();
+            let avail_h = ui.available_height();
 
-                        let options = skill_draft.options.clone();
-                        for &skill in &options {
-                            egui::Frame::default()
-                                .fill(egui::Color32::from_rgb(16, 26, 45))
-                                .stroke(egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(0, 200, 255)))
-                                .rounding(10.0)
-                                .inner_margin(12.0)
-                                .show(ui, |ui| {
-                                    ui.set_max_width(340.0);
-                                    ui.vertical(|ui| {
-                                        ui.horizontal(|ui| {
-                                            if let Some(&tex_id) = skill_tex_map.get(&skill) {
-                                                ui.add(egui::Image::new(egui::load::SizedTexture::new(
-                                                    tex_id,
-                                                    egui::vec2(65.0, 90.0),
-                                                )));
-                                            }
-                                            ui.vertical(|ui| {
-                                                let tag_color = if skill.is_active() { egui::Color32::from_rgb(255, 80, 255) } else { egui::Color32::from_rgb(80, 255, 140) };
-                                                ui.label(egui::RichText::new(if skill.is_active() { "⚡ HABILIDAD ACTIVA TACTIL" } else { "🛡️ MEJORA PASIVA" }).size(10.0).color(tag_color).strong());
-                                                ui.label(egui::RichText::new(skill.name()).size(16.0).color(egui::Color32::WHITE).strong());
-                                                ui.add_space(2.0);
-                                                ui.label(egui::RichText::new(skill.description()).size(11.0).color(egui::Color32::from_rgb(200, 215, 235)));
-                                            });
-                                        });
+            // Tamaño dinámico de cada carta (3 cartas en fila horizontal)
+            let card_w = ((avail_w - 40.0) / 3.2).clamp(90.0, 130.0);
+            let card_h = card_w * (340.0 / 220.0);
 
-                                        ui.add_space(6.0);
-                                        let btn = ui.add(
-                                            egui::Button::new(
-                                                egui::RichText::new("EQUIPAR ESTA HABILIDAD")
-                                                    .size(13.5)
-                                                    .color(egui::Color32::BLACK)
-                                                    .strong(),
-                                            )
-                                            .fill(egui::Color32::from_rgb(0, 220, 255))
-                                            .min_size(egui::vec2(310.0, 36.0)),
-                                        );
+            let total_w = 3.0 * card_w + 2.0 * 10.0;
+            let top_pad = ((avail_h - card_h) * 0.5).max(0.0);
+            let side_pad = ((avail_w - total_w) * 0.5).max(0.0);
 
-                                        if btn.clicked() {
-                                            if skill.is_active() {
-                                                if !current_player.active_skills.contains(&skill) {
-                                                    current_player.active_skills.push(skill);
-                                                }
-                                            } else {
-                                                current_player.passive_skills.push(skill);
-                                                match skill {
-                                                    SkillId::OverclockMutex => current_player.fire_rate_mult += 0.25,
-                                                    SkillId::UnsafeBlock => {
-                                                        current_player.damage_mult += 0.40;
-                                                        current_player.max_health *= 0.85;
-                                                        current_player.health = current_player.health.min(current_player.max_health);
-                                                    }
-                                                    SkillId::PatternMatching => current_player.crit_chance += 0.15,
-                                                    SkillId::TokioReactor => current_player.speed_mult += 0.20,
-                                                    SkillId::VectorCapacity => {
-                                                        current_player.max_shield += 50.0;
-                                                        current_player.shield += 50.0;
-                                                    }
-                                                    SkillId::OptionSome => current_player.powerup_drop_mult += 0.35,
-                                                    SkillId::ZeroCostAbstraction => current_player.cooldown_reduction *= 0.80,
-                                                    _ => {}
-                                                }
-                                            }
-                                            skill_draft.is_active = false;
+            ui.vertical(|ui| {
+                ui.add_space(top_pad);
+
+                ui.horizontal(|ui| {
+                    ui.add_space(side_pad);
+
+                    let options = skill_draft.options.clone();
+                    for &skill in &options {
+                        if let Some(&tex_id) = skill_tex_map.get(&skill) {
+                            let img_btn = ui.add(
+                                egui::Image::new(egui::load::SizedTexture::new(
+                                    tex_id,
+                                    egui::vec2(card_w, card_h),
+                                ))
+                                .sense(egui::Sense::click()),
+                            );
+
+                            if img_btn.clicked() {
+                                if skill.is_active() {
+                                    if !current_player.active_skills.contains(&skill) {
+                                        current_player.active_skills.push(skill);
+                                    }
+                                } else {
+                                    current_player.passive_skills.push(skill);
+                                    match skill {
+                                        SkillId::OverclockMutex => current_player.fire_rate_mult += 0.25,
+                                        SkillId::UnsafeBlock => {
+                                            current_player.damage_mult += 0.40;
+                                            current_player.max_health *= 0.85;
+                                            current_player.health = current_player.health.min(current_player.max_health);
                                         }
-                                    });
-                                });
-                            ui.add_space(10.0);
+                                        SkillId::PatternMatching => current_player.crit_chance += 0.15,
+                                        SkillId::TokioReactor => current_player.speed_mult += 0.20,
+                                        SkillId::VectorCapacity => {
+                                            current_player.max_shield += 50.0;
+                                            current_player.shield += 50.0;
+                                        }
+                                        SkillId::OptionSome => current_player.powerup_drop_mult += 0.35,
+                                        SkillId::ZeroCostAbstraction => current_player.cooldown_reduction *= 0.80,
+                                        _ => {}
+                                    }
+                                }
+                                skill_draft.is_active = false;
+                            }
                         }
-                    });
+                        ui.add_space(10.0);
+                    }
                 });
+            });
         });
 }
 
