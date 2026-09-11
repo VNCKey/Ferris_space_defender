@@ -2405,6 +2405,14 @@ fn ui_playing_hud(
     mut query_enemies: Query<(Entity, &mut Enemy, &Transform), (Without<Player>, Without<PowerUpItem>)>,
     query_enemy_lasers: Query<Entity, With<EnemyLaser>>,
 ) {
+    let mut skill_tex_map = HashMap::new();
+    for &skill in &current_player.active_skills {
+        if let Some(h) = assets.skill_textures.get(&skill) {
+            let tid = contexts.add_image(h.clone_weak());
+            skill_tex_map.insert(skill, tid);
+        }
+    }
+
     let ctx = contexts.ctx_mut();
 
     egui::TopBottomPanel::top("top_hud")
@@ -2463,56 +2471,67 @@ fn ui_playing_hud(
             }
         });
 
-    // Panel Inferior: Botones Táctiles para Habilidades Activas
+    // Panel Inferior Elevado (Safe Area para la barra de navegación de Android)
     if !current_player.active_skills.is_empty() {
-        egui::TopBottomPanel::bottom("active_skill_touch_panel")
-            .frame(egui::Frame::default().fill(egui::Color32::TRANSPARENT))
+        egui::Area::new(egui::Id::new("active_skill_touch_area"))
+            .anchor(egui::Align2::LEFT_BOTTOM, egui::vec2(20.0, -85.0))
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
-                    ui.add_space(15.0);
-                    for (idx, &skill) in current_player.active_skills.clone().iter().enumerate() {
+                    let active_skills = current_player.active_skills.clone();
+                    for (idx, &skill) in active_skills.iter().enumerate() {
                         let is_cd = if idx == 0 { current_player.active_cooldown_1 > 0.0 } else { current_player.active_cooldown_2 > 0.0 };
-                        let cd_val = if idx == 0 { current_player.active_cooldown_1 } else { current_player.active_cooldown_2 };
 
-                        let (label_str, fill_color) = if is_cd {
-                            (format!("{}\n[{:.1}s]", skill.name(), cd_val), egui::Color32::from_rgb(40, 45, 60))
-                        } else {
-                            (format!("⚡ {}\n¡ACTIVAR!", skill.name()), egui::Color32::from_rgb(0, 180, 230))
-                        };
-
-                        let btn = ui.add(
-                            egui::Button::new(
-                                egui::RichText::new(label_str)
-                                    .size(11.5)
-                                    .color(if is_cd { egui::Color32::GRAY } else { egui::Color32::WHITE })
-                                    .strong(),
-                            )
-                            .min_size(egui::vec2(110.0, 46.0))
-                            .fill(fill_color)
-                            .stroke(egui::Stroke::new(1.5_f32, if is_cd { egui::Color32::DARK_GRAY } else { egui::Color32::YELLOW })),
-                        );
-
-                        if btn.clicked() && !is_cd {
-                            if idx == 0 {
-                                current_player.active_cooldown_1 = skill.cooldown() * current_player.cooldown_reduction;
+                        if let Some(&tex_id) = skill_tex_map.get(&skill) {
+                            let frame_color = if is_cd {
+                                egui::Color32::from_rgb(30, 35, 45)
                             } else {
-                                current_player.active_cooldown_2 = skill.cooldown() * current_player.cooldown_reduction;
-                            }
+                                egui::Color32::from_rgb(0, 220, 255)
+                            };
 
-                            match skill {
-                                SkillId::ZeroCostBeam => {
-                                    current_player.beam_active_timer = 3.0;
-                                    current_player.status_message = "ZERO-COST BEAM ACTIVADO (3S)".to_string();
-                                    current_player.status_timer = 3.0;
-                                    trigger_vibration(200);
-                                }
-                                SkillId::CargoClean => {
-                                    trigger_nuke_effect(&mut commands, &assets, &mut current_player, &mut screen_shake, &mut query_enemies, &query_enemy_lasers);
-                                }
-                                _ => {}
-                            }
+                            egui::Frame::default()
+                                .fill(if is_cd { egui::Color32::from_rgba_unmultiplied(10, 12, 20, 200) } else { egui::Color32::from_rgba_unmultiplied(20, 40, 70, 220) })
+                                .stroke(egui::Stroke::new(if is_cd { 1.0_f32 } else { 2.5_f32 }, frame_color))
+                                .rounding(8.0)
+                                .inner_margin(4.0)
+                                .show(ui, |ui| {
+                                    let tint = if is_cd {
+                                        egui::Color32::from_gray(100)
+                                    } else {
+                                        egui::Color32::WHITE
+                                    };
+
+                                    let img_btn = ui.add(
+                                        egui::Image::new(egui::load::SizedTexture::new(
+                                            tex_id,
+                                            egui::vec2(58.0, 82.0),
+                                        ))
+                                        .tint(tint)
+                                        .sense(egui::Sense::click()),
+                                    );
+
+                                    if img_btn.clicked() && !is_cd {
+                                        if idx == 0 {
+                                            current_player.active_cooldown_1 = skill.cooldown() * current_player.cooldown_reduction;
+                                        } else {
+                                            current_player.active_cooldown_2 = skill.cooldown() * current_player.cooldown_reduction;
+                                        }
+
+                                        match skill {
+                                            SkillId::ZeroCostBeam => {
+                                                current_player.beam_active_timer = 3.0;
+                                                current_player.status_message = "ZERO-COST BEAM ACTIVADO (3S)".to_string();
+                                                current_player.status_timer = 3.0;
+                                                trigger_vibration(200);
+                                            }
+                                            SkillId::CargoClean => {
+                                                trigger_nuke_effect(&mut commands, &assets, &mut current_player, &mut screen_shake, &mut query_enemies, &query_enemy_lasers);
+                                            }
+                                            _ => {}
+                                        }
+                                    }
+                                });
                         }
-                        ui.add_space(10.0);
+                        ui.add_space(12.0);
                     }
                 });
             });
