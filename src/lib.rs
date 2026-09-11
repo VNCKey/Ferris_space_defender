@@ -2186,89 +2186,53 @@ fn ui_name_input(
                                 .color(egui::Color32::from_rgb(255, 215, 0))
                                 .strong(),
                         );
+                        ui.label(
+                            egui::RichText::new("Desliza verticalmente para explorar las 4 clases de naves")
+                                .size(11.0)
+                                .color(egui::Color32::GRAY),
+                        );
                         ui.add_space(8.0);
 
-                        // Grid 2x2 de Cartas de Clase (Solo Imágenes Interactivas)
-                        let grid_items = [
+                        // Lista Vertical de Cartas de Clase a Ancho Completo (Solo Imágenes Interactivas)
+                        let class_items = [
                             (ShipClass::Defensor, card_defensor_id, egui::Color32::from_rgb(255, 190, 40)),
                             (ShipClass::Mago, card_mago_id, egui::Color32::from_rgb(40, 200, 255)),
                             (ShipClass::Asesino, card_asesino_id, egui::Color32::from_rgb(50, 255, 120)),
                             (ShipClass::Artillero, card_artillero_id, egui::Color32::from_rgb(255, 80, 50)),
                         ];
 
-                        ui.horizontal(|ui| {
-                            let avail_w = ui.available_width();
-                            let card_w = ((avail_w - 30.0) / 2.0).clamp(130.0, 160.0);
-                            let card_h = card_w * (340.0 / 220.0);
-                            let total_grid_w = 2.0 * card_w + 12.0;
-                            let pad_side = ((avail_w - total_grid_w) * 0.5).max(0.0);
+                        let avail_w = ui.available_width();
+                        let card_w = (avail_w - 20.0).clamp(280.0, 340.0);
+                        let card_h = card_w * (340.0 / 220.0);
 
-                            ui.add_space(pad_side);
+                        for (s_class, card_tex_id, theme_color) in class_items {
+                            let is_selected = current_player.ship_class == s_class;
+                            let frame_stroke = if is_selected {
+                                egui::Stroke::new(3.5_f32, theme_color)
+                            } else {
+                                egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(40, 50, 70))
+                            };
 
-                            // Columna 1: Defensor y Asesino
-                            ui.vertical(|ui| {
-                                for &(s_class, card_tex_id, theme_color) in &[grid_items[0], grid_items[2]] {
-                                    let is_selected = current_player.ship_class == s_class;
-                                    let frame_stroke = if is_selected {
-                                        egui::Stroke::new(3.5_f32, theme_color)
-                                    } else {
-                                        egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(40, 50, 70))
-                                    };
-
-                                    egui::Frame::default()
-                                        .fill(if is_selected { egui::Color32::from_rgb(20, 32, 55) } else { egui::Color32::from_rgb(10, 14, 24) })
-                                        .stroke(frame_stroke)
-                                        .rounding(10.0)
-                                        .inner_margin(4.0)
-                                        .show(ui, |ui| {
-                                            let img_btn = ui.add(
-                                                egui::Image::new(egui::load::SizedTexture::new(
-                                                    card_tex_id,
-                                                    egui::vec2(card_w - 8.0, card_h - 8.0),
-                                                ))
-                                                .sense(egui::Sense::click()),
-                                            );
-                                            if img_btn.clicked() {
-                                                current_player.ship_class = s_class;
-                                            }
-                                        });
-                                    ui.add_space(8.0);
-                                }
-                            });
-
-                            ui.add_space(8.0);
-
-                            // Columna 2: Mago y Artillero
-                            ui.vertical(|ui| {
-                                for &(s_class, card_tex_id, theme_color) in &[grid_items[1], grid_items[3]] {
-                                    let is_selected = current_player.ship_class == s_class;
-                                    let frame_stroke = if is_selected {
-                                        egui::Stroke::new(3.5_f32, theme_color)
-                                    } else {
-                                        egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(40, 50, 70))
-                                    };
-
-                                    egui::Frame::default()
-                                        .fill(if is_selected { egui::Color32::from_rgb(20, 32, 55) } else { egui::Color32::from_rgb(10, 14, 24) })
-                                        .stroke(frame_stroke)
-                                        .rounding(10.0)
-                                        .inner_margin(4.0)
-                                        .show(ui, |ui| {
-                                            let img_btn = ui.add(
-                                                egui::Image::new(egui::load::SizedTexture::new(
-                                                    card_tex_id,
-                                                    egui::vec2(card_w - 8.0, card_h - 8.0),
-                                                ))
-                                                .sense(egui::Sense::click()),
-                                            );
-                                            if img_btn.clicked() {
-                                                current_player.ship_class = s_class;
-                                            }
-                                        });
-                                    ui.add_space(8.0);
-                                }
-                            });
-                        });
+                            egui::Frame::default()
+                                .fill(if is_selected { egui::Color32::from_rgb(20, 32, 55) } else { egui::Color32::from_rgb(10, 14, 24) })
+                                .stroke(frame_stroke)
+                                .rounding(12.0)
+                                .inner_margin(6.0)
+                                .show(ui, |ui| {
+                                    ui.set_max_width(card_w);
+                                    let img_btn = ui.add(
+                                        egui::Image::new(egui::load::SizedTexture::new(
+                                            card_tex_id,
+                                            egui::vec2(card_w - 12.0, card_h - 12.0),
+                                        ))
+                                        .sense(egui::Sense::click()),
+                                    );
+                                    if img_btn.clicked() {
+                                        current_player.ship_class = s_class;
+                                    }
+                                });
+                            ui.add_space(10.0);
+                        }
 
                         ui.add_space(10.0);
 
