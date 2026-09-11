@@ -14,7 +14,6 @@ pub enum AppState {
     #[default]
     NameInput,
     Playing,
-    SkillDraft,
     GameOver,
 }
 
@@ -306,6 +305,7 @@ impl SkillId {
 
 #[derive(Resource, Default)]
 pub struct SkillDraftOptions {
+    pub is_active: bool,
     pub options: Vec<SkillId>,
 }
 
@@ -649,7 +649,6 @@ pub fn run() {
         .insert_resource(ClearColor(Color::srgb(0.0, 0.0, 0.0)))
         .add_systems(Startup, setup_app)
         .add_systems(Update, ui_name_input.run_if(in_state(AppState::NameInput)))
-        .add_systems(Update, ui_skill_draft.run_if(in_state(AppState::SkillDraft)))
         .add_systems(Update, ui_game_over.run_if(in_state(AppState::GameOver)))
         .add_systems(OnEnter(AppState::Playing), setup_playing)
         .add_systems(
@@ -665,6 +664,12 @@ pub fn run() {
                 enemy_laser_system,
                 enemy_spawn_system,
                 boss_spawn_system,
+            )
+                .run_if(in_state(AppState::Playing)),
+        )
+        .add_systems(
+            Update,
+            (
                 enemy_movement_system,
                 powerup_system,
                 collision_system,
@@ -675,6 +680,7 @@ pub fn run() {
                 shield_visual_system,
                 passive_skills_system,
                 ui_playing_hud,
+                ui_skill_draft,
             )
                 .run_if(in_state(AppState::Playing)),
         )
@@ -978,8 +984,13 @@ fn player_input_system(
     touches: Res<Touches>,
     windows: Query<&Window>,
     current_player: Res<CurrentPlayer>,
+    skill_draft: Res<SkillDraftOptions>,
     mut query: Query<&mut Transform, With<Player>>,
 ) {
+    if skill_draft.is_active {
+        return;
+    }
+
     if let Ok(mut transform) = query.get_single_mut() {
         let dt = time.delta_seconds();
         let speed = current_player.ship_class.speed() * current_player.speed_mult;
@@ -1022,7 +1033,11 @@ fn shield_visual_system(
     mut current_player: ResMut<CurrentPlayer>,
     mut player_query: Query<(&Transform, &mut Sprite), (With<Player>, Without<PlayerShieldVisual>)>,
     mut shield_query: Query<(&mut Transform, &mut Visibility, &mut Sprite), With<PlayerShieldVisual>>,
+    skill_draft: Res<SkillDraftOptions>,
 ) {
+    if skill_draft.is_active {
+        return;
+    }
     let dt = time.delta_seconds();
 
     if current_player.shield_hit_timer > 0.0 {
@@ -1065,8 +1080,12 @@ fn player_shoot_system(
     assets: Res<GameAssets>,
     mut timers: ResMut<GameTimers>,
     mut current_player: ResMut<CurrentPlayer>,
+    skill_draft: Res<SkillDraftOptions>,
     query: Query<&Transform, With<Player>>,
 ) {
+    if skill_draft.is_active {
+        return;
+    }
     // Aplicar multiplicador de cadencia (Overclock Mutex)
     let effective_interval = current_player.ship_class.fire_interval() / current_player.fire_rate_mult;
     timers.player_shoot.set_duration(std::time::Duration::from_secs_f32(effective_interval.max(0.05)));
@@ -1157,7 +1176,11 @@ fn passive_skills_system(
     time: Res<Time>,
     mut timers: ResMut<GameTimers>,
     mut current_player: ResMut<CurrentPlayer>,
+    skill_draft: Res<SkillDraftOptions>,
 ) {
+    if skill_draft.is_active {
+        return;
+    }
     let dt = time.delta_seconds();
 
     // Actualizar Cooldowns de Habilidades Activas
@@ -1181,8 +1204,12 @@ fn passive_skills_system(
 fn laser_movement_system(
     mut commands: Commands,
     time: Res<Time>,
+    skill_draft: Res<SkillDraftOptions>,
     mut query: Query<(Entity, &mut Transform, &Laser)>,
 ) {
+    if skill_draft.is_active {
+        return;
+    }
     let dt = time.delta_seconds();
     for (entity, mut transform, laser) in query.iter_mut() {
         transform.translation.x += laser.velocity.x * dt;
@@ -1196,8 +1223,12 @@ fn laser_movement_system(
 fn enemy_laser_system(
     mut commands: Commands,
     time: Res<Time>,
+    skill_draft: Res<SkillDraftOptions>,
     mut query: Query<(Entity, &mut Transform, &EnemyLaser)>,
 ) {
+    if skill_draft.is_active {
+        return;
+    }
     let dt = time.delta_seconds();
     for (entity, mut transform, laser) in query.iter_mut() {
         transform.translation.x += laser.velocity.x * dt;
@@ -1218,7 +1249,12 @@ fn enemy_spawn_system(
     mut timers: ResMut<GameTimers>,
     assets: Res<GameAssets>,
     current_player: Res<CurrentPlayer>,
+    skill_draft: Res<SkillDraftOptions>,
 ) {
+    if skill_draft.is_active {
+        return;
+    }
+
     timers.enemy_spawn.tick(time.delta());
     if timers.enemy_spawn.just_finished() {
         if assets.regular_enemies.is_empty() {
@@ -1311,8 +1347,13 @@ fn boss_spawn_system(
     mut timers: ResMut<GameTimers>,
     assets: Res<GameAssets>,
     mut current_player: ResMut<CurrentPlayer>,
+    skill_draft: Res<SkillDraftOptions>,
     query_bosses: Query<&Enemy>,
 ) {
+    if skill_draft.is_active {
+        return;
+    }
+
     timers.boss_spawn_timer.tick(time.delta());
 
     let has_boss = query_bosses.iter().any(|e| e.is_boss);
@@ -1355,8 +1396,12 @@ fn enemy_movement_system(
     mut commands: Commands,
     time: Res<Time>,
     current_player: Res<CurrentPlayer>,
+    skill_draft: Res<SkillDraftOptions>,
     mut query: Query<(Entity, &mut Transform, &mut Enemy)>,
 ) {
+    if skill_draft.is_active {
+        return;
+    }
     let dt = time.delta_seconds();
     let mut rng = rand::thread_rng();
 
@@ -1466,7 +1511,11 @@ fn difficulty_and_wave_system(
     time: Res<Time>,
     mut timers: ResMut<GameTimers>,
     mut current_player: ResMut<CurrentPlayer>,
+    skill_draft: Res<SkillDraftOptions>,
 ) {
+    if skill_draft.is_active {
+        return;
+    }
     let dt = time.delta_seconds();
     current_player.time_elapsed += dt;
 
@@ -1495,11 +1544,15 @@ fn powerup_system(
     assets: Res<GameAssets>,
     mut current_player: ResMut<CurrentPlayer>,
     mut screen_shake: ResMut<ScreenShake>,
+    skill_draft: Res<SkillDraftOptions>,
     mut query_powerups: Query<(Entity, &mut Transform, &PowerUpItem)>,
     query_player: Query<&Transform, (With<Player>, Without<PowerUpItem>, Without<Enemy>)>,
     mut query_enemies: Query<(Entity, &mut Enemy, &Transform), (Without<Player>, Without<PowerUpItem>)>,
     query_enemy_lasers: Query<Entity, With<EnemyLaser>>,
 ) {
+    if skill_draft.is_active {
+        return;
+    }
     let dt = time.delta_seconds();
 
     for (p_entity, mut p_tr, powerup) in query_powerups.iter_mut() {
@@ -1697,6 +1750,9 @@ fn collision_system(
     query_enemy_lasers: Query<(Entity, &Transform), With<EnemyLaser>>,
     query_player: Query<&Transform, With<Player>>,
 ) {
+    if skill_draft.is_active {
+        return;
+    }
     let mut rng = rand::thread_rng();
 
     // Láseres del Jugador vs Enemigos / Jefes
@@ -1777,7 +1833,7 @@ fn collision_system(
                             }
                         }
                         skill_draft.options = chosen;
-                        next_state.set(AppState::SkillDraft);
+                        skill_draft.is_active = true;
                     } else {
                         play_sound(&mut commands, assets.snd_enemy_death.clone(), 0.28);
                     }
@@ -2000,7 +2056,14 @@ fn floating_text_system(
     }
 }
 
-fn combo_system(time: Res<Time>, mut current_player: ResMut<CurrentPlayer>) {
+fn combo_system(
+    time: Res<Time>,
+    mut current_player: ResMut<CurrentPlayer>,
+    skill_draft: Res<SkillDraftOptions>,
+) {
+    if skill_draft.is_active {
+        return;
+    }
     if current_player.combo_timer > 0.0 {
         current_player.combo_timer -= time.delta_seconds();
         if current_player.combo_timer <= 0.0 {
@@ -2237,10 +2300,13 @@ fn ui_name_input(
 fn ui_skill_draft(
     mut contexts: EguiContexts,
     mut current_player: ResMut<CurrentPlayer>,
-    skill_draft: Res<SkillDraftOptions>,
+    mut skill_draft: ResMut<SkillDraftOptions>,
     assets: Res<GameAssets>,
-    mut next_state: ResMut<NextState<AppState>>,
 ) {
+    if !skill_draft.is_active {
+        return;
+    }
+
     let mut skill_tex_map = HashMap::new();
     for &skill in &skill_draft.options {
         if let Some(h) = assets.skill_textures.get(&skill) {
@@ -2272,7 +2338,8 @@ fn ui_skill_draft(
                         );
                         ui.add_space(14.0);
 
-                        for &skill in &skill_draft.options {
+                        let options = skill_draft.options.clone();
+                        for &skill in &options {
                             egui::Frame::default()
                                 .fill(egui::Color32::from_rgb(16, 26, 45))
                                 .stroke(egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(0, 200, 255)))
@@ -2334,7 +2401,7 @@ fn ui_skill_draft(
                                                     _ => {}
                                                 }
                                             }
-                                            next_state.set(AppState::Playing);
+                                            skill_draft.is_active = false;
                                         }
                                     });
                                 });
