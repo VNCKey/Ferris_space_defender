@@ -5,12 +5,14 @@ edition = "2021"
 
 [package.metadata.android]
 package = "com.ferriskey.spacedefender"
-label = "Ferris Defender"
 assets = "assets"
-res = "res"
-icon = "@mipmap/ic_launcher"
+resources = "res"
 target_sdk_version = 34
 min_sdk_version = 24
+
+[package.metadata.android.application]
+label = "FerriSpace"
+icon = "@mipmap/ic_launcher"
 
 [package.metadata.android.signing.release]
 path = "/home/alek/.android/debug.keystore"
