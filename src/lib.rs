@@ -104,6 +104,7 @@ pub struct CurrentPlayer {
     pub status_timer: f32,
     pub shield_hit_timer: f32,
     pub hull_hit_timer: f32,
+    pub invulnerable_timer: f32,
 }
 
 impl Default for CurrentPlayer {
@@ -123,6 +124,7 @@ impl Default for CurrentPlayer {
             status_timer: 0.0,
             shield_hit_timer: 0.0,
             hull_hit_timer: 0.0,
+            invulnerable_timer: 0.0,
         }
     }
 }
@@ -403,6 +405,7 @@ fn setup_playing(
     current_player.enemies_killed = 0;
     current_player.status_message = "MISION INICIADA".to_string();
     current_player.status_timer = 2.5;
+    current_player.invulnerable_timer = 0.0;
 
     timers.enemy_spawn.reset();
     timers.player_shoot.reset();
@@ -555,6 +558,9 @@ fn shield_visual_system(
     }
     if current_player.hull_hit_timer > 0.0 {
         current_player.hull_hit_timer -= dt;
+    }
+    if current_player.invulnerable_timer > 0.0 {
+        current_player.invulnerable_timer -= dt;
     }
 
     if let Ok((player_tr, mut player_sprite)) = player_query.get_single_mut() {
@@ -783,8 +789,7 @@ fn boss_spawn_system(
 fn enemy_movement_system(
     mut commands: Commands,
     time: Res<Time>,
-    assets: Res<GameAssets>,
-    mut current_player: ResMut<CurrentPlayer>,
+    current_player: Res<CurrentPlayer>,
     mut query: Query<(Entity, &mut Transform, &mut Enemy)>,
 ) {
     let dt = time.delta_seconds();
@@ -853,9 +858,8 @@ fn enemy_movement_system(
                 }
             }
 
-            // Si sobrepasa la parte inferior, daña al jugador
+            // Si sobrepasa la parte inferior de la pantalla, desaparece sin dañar al jugador
             if transform.translation.y < -430.0 {
-                apply_damage_to_player(&mut commands, &assets, &mut current_player, 15.0);
                 commands.entity(entity).despawn();
             }
         }
@@ -990,6 +994,10 @@ fn apply_damage_to_player(
     current_player: &mut ResMut<CurrentPlayer>,
     damage: f32,
 ) {
+    if current_player.invulnerable_timer > 0.0 {
+        return;
+    }
+    current_player.invulnerable_timer = 0.35; // 350ms de gracia tras recibir impacto
     play_sound(commands, assets.snd_player_damage.clone(), 0.65);
     if current_player.shield > 0.0 {
         current_player.shield_hit_timer = 0.28;
