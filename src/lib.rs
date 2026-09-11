@@ -2419,37 +2419,35 @@ fn ui_playing_hud(
         )
         .show(ctx, |ui| {
             ui.vertical(|ui| {
-                // Linea 1: Puntaje y Oleada
-                ui.horizontal(|ui| {
-                    ui.label(
-                        egui::RichText::new(format!("PTS: {}", current_player.score))
-                            .color(egui::Color32::from_rgb(255, 215, 50))
-                            .strong()
-                            .size(14.0),
-                    );
-                    ui.add_space(12.0);
-                    ui.label(
-                        egui::RichText::new(format!("OLA: {}", current_player.wave))
-                            .color(egui::Color32::LIGHT_BLUE)
-                            .strong(),
-                    );
-                });
-
-                ui.add_space(4.0);
-
-                // Linea 2: Barras de Vida (HP) y Escudo (ESC) ordenadas de forma independiente
+                // Linea unica: HP - ESC - PTS - OLA
                 ui.horizontal(|ui| {
                     let health_frac = (current_player.health / current_player.max_health).clamp(0.0, 1.0);
                     let bar_color = if health_frac > 0.5 { egui::Color32::GREEN } else if health_frac > 0.25 { egui::Color32::YELLOW } else { egui::Color32::RED };
                     ui.label(egui::RichText::new(format!("HP {:.0}%", health_frac * 100.0)).size(11.0).color(bar_color).strong());
-                    ui.add(egui::ProgressBar::new(health_frac).fill(bar_color).desired_width(65.0));
+                    ui.add(egui::ProgressBar::new(health_frac).fill(bar_color).desired_width(45.0));
 
                     if current_player.shield > 0.0 {
-                        ui.add_space(8.0);
+                        ui.add_space(4.0);
                         let shield_frac = (current_player.shield / current_player.max_shield).clamp(0.0, 1.0);
                         ui.label(egui::RichText::new(format!("ESC {:.0}", current_player.shield)).size(11.0).color(egui::Color32::from_rgb(80, 200, 255)).strong());
-                        ui.add(egui::ProgressBar::new(shield_frac).fill(egui::Color32::from_rgb(80, 200, 255)).desired_width(55.0));
+                        ui.add(egui::ProgressBar::new(shield_frac).fill(egui::Color32::from_rgb(80, 200, 255)).desired_width(40.0));
                     }
+
+                    ui.add_space(6.0);
+                    ui.label(
+                        egui::RichText::new(format!("PTS: {}", current_player.score))
+                            .color(egui::Color32::from_rgb(255, 215, 50))
+                            .strong()
+                            .size(12.0),
+                    );
+
+                    ui.add_space(6.0);
+                    ui.label(
+                        egui::RichText::new(format!("OLA: {}", current_player.wave))
+                            .color(egui::Color32::LIGHT_BLUE)
+                            .strong()
+                            .size(12.0),
+                    );
                 });
 
                 // Barra de vida de Jefe
