@@ -1939,14 +1939,62 @@ fn ui_game_over(
                                 .color(egui::Color32::from_rgb(255, 60, 60))
                                 .strong(),
                         );
-                        ui.add_space(4.0);
+                        ui.add_space(6.0);
 
-                        ui.label(
-                            egui::RichText::new("thread 'ferris_main' panicked at 'Hull integrity 0%: Explicit panic requested', src/pilot.rs:404")
-                                .size(10.5)
-                                .monospace()
-                                .color(egui::Color32::from_rgb(255, 120, 120)),
-                        );
+                        // Consola Auténtica de Rust Panic (Classic Rust Panic Terminal Dump)
+                        let pilot_thread_name = if current_player.name.trim().is_empty() {
+                            "ferris_main".to_string()
+                        } else {
+                            format!("pilot::{}", current_player.name.trim().replace(' ', "_").to_lowercase())
+                        };
+
+                        egui::Frame::default()
+                            .fill(egui::Color32::from_rgb(12, 10, 14))
+                            .stroke(egui::Stroke::new(1.0f32, egui::Color32::from_rgb(210, 50, 50)))
+                            .rounding(6.0)
+                            .inner_margin(10.0)
+                            .show(ui, |ui| {
+                                ui.set_max_width(340.0);
+                                ui.vertical(|ui| {
+                                    ui.label(
+                                        egui::RichText::new("[ STDERR :: RUST RUNTIME CRASH DUMP ]")
+                                            .size(10.0)
+                                            .monospace()
+                                            .color(egui::Color32::from_rgb(255, 85, 85))
+                                            .strong(),
+                                    );
+                                    ui.add_space(2.0);
+                                    ui.label(
+                                        egui::RichText::new(format!(
+                                            "thread '{}' panicked at 'fatal_hull_breach: integrity reached 0.0%', src/spacecraft/pilot.rs:404:13",
+                                            pilot_thread_name
+                                        ))
+                                        .size(10.0)
+                                        .monospace()
+                                        .color(egui::Color32::from_rgb(255, 120, 120)),
+                                    );
+                                    ui.add_space(3.0);
+                                    ui.label(
+                                        egui::RichText::new("stack backtrace:")
+                                            .size(9.5)
+                                            .monospace()
+                                            .color(egui::Color32::from_rgb(170, 170, 180)),
+                                    );
+                                    ui.label(
+                                        egui::RichText::new("   0: rust_begin_unwind\n   1: core::panicking::panic_fmt\n   2: ferris_space_defender::combat::handle_fatal_collision\n   3: ferris_space_defender::engine::hull_breach\n   4: <FerrisShip as SpaceCraft>::on_destroyed")
+                                            .size(9.0)
+                                            .monospace()
+                                            .color(egui::Color32::from_rgb(140, 150, 170)),
+                                    );
+                                    ui.add_space(3.0);
+                                    ui.label(
+                                        egui::RichText::new("note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace")
+                                            .size(9.0)
+                                            .monospace()
+                                            .color(egui::Color32::from_rgb(245, 195, 65)),
+                                    );
+                                });
+                            });
 
                         ui.add_space(8.0);
 
