@@ -102,6 +102,8 @@ pub struct CurrentPlayer {
     pub enemies_killed: u32,
     pub status_message: String,
     pub status_timer: f32,
+    pub shield_hit_timer: f32,
+    pub hull_hit_timer: f32,
 }
 
 impl Default for CurrentPlayer {
@@ -119,6 +121,8 @@ impl Default for CurrentPlayer {
             enemies_killed: 0,
             status_message: String::new(),
             status_timer: 0.0,
+            shield_hit_timer: 0.0,
+            hull_hit_timer: 0.0,
         }
     }
 }
@@ -390,13 +394,14 @@ fn setup_playing(
         Player,
     ));
 
-    // Escudo visual holografico circular
+    // Escudo de impacto (oculto por defecto, solo destella al recibir golpes)
     commands.spawn((
         SpriteBundle {
             texture: assets.shield_dome.clone(),
+            visibility: Visibility::Hidden,
             sprite: Sprite {
-                color: Color::srgba(1.0, 1.0, 1.0, 0.85),
-                custom_size: Some(Vec2::new(135.0, 115.0)),
+                color: Color::srgba(0.5, 0.95, 1.0, 0.9),
+                custom_size: Some(Vec2::new(138.0, 118.0)),
                 ..default()
             },
             transform: Transform::from_xyz(0.0, -260.0, 9.5),
@@ -510,20 +515,38 @@ fn player_input_system(
 
 fn shield_visual_system(
     time: Res<Time>,
-    current_player: Res<CurrentPlayer>,
-    player_query: Query<&Transform, (With<Player>, Without<PlayerShieldVisual>)>,
+    mut current_player: ResMut<CurrentPlayer>,
+    mut player_query: Query<(&Transform, &mut Sprite), (With<Player>, Without<PlayerShieldVisual>)>,
     mut shield_query: Query<(&mut Transform, &mut Visibility, &mut Sprite), With<PlayerShieldVisual>>,
 ) {
-    if let Ok(player_tr) = player_query.get_single() {
-        if let Ok((mut shield_tr, mut visibility, mut sprite)) = shield_query.get_single_mut() {
+    let dt = time.delta_seconds();
+
+    if current_player.shield_hit_timer > 0.0 {
+        current_player.shield_hit_timer -= dt;
+    }
+    if current_player.hull_hit_timer > 0.0 {
+        current_player.hull_hit_timer -= dt;
+    }
+
+    if let Ok((player_tr, mut player_sprite)) = player_query.get_single_mut() {
+        // Destello rojo en la nave si el golpe dañó directamente el casco
+        if current_player.hull_hit_timer > 0.0 {
+            player_sprite.color = Color::srgb(1.0, 0.35, 0.35);
+        } else {
+            player_sprite.color = Color::WHITE;
+        }
+
+        if let Ok((mut shield_tr, mut visibility, mut shield_sprite)) = shield_query.get_single_mut() {
             shield_tr.translation = player_tr.translation;
             shield_tr.translation.z = 9.5;
-            if current_player.shield > 0.0 {
+
+            // OPCION B: El campo de fuerza solo es visible con un destello reactivo al recibir impacto
+            if current_player.shield_hit_timer > 0.0 {
                 *visibility = Visibility::Visible;
-                let pulse = (time.elapsed_seconds() * 4.5).sin() * 0.04 + 1.0;
-                shield_tr.scale = Vec3::splat(pulse);
-                let alpha = (current_player.shield / current_player.max_shield).clamp(0.4, 0.95);
-                sprite.color = Color::srgba(1.0, 1.0, 1.0, alpha);
+                let progress = (current_player.shield_hit_timer / 0.28).clamp(0.0, 1.0);
+                let scale = 1.0 + (1.0 - progress) * 0.12;
+                shield_tr.scale = Vec3::splat(scale);
+                shield_sprite.color = Color::srgba(0.5, 0.95, 1.0, progress * 0.95);
             } else {
                 *visibility = Visibility::Hidden;
             }
@@ -868,6 +891,7 @@ fn powerup_system(
                     }
                     PowerUpType::Shield => {
                         current_player.shield = (current_player.shield + 50.0).min(current_player.max_shield);
+                        current_player.shield_hit_timer = 0.45; // Destello de recarga
                         current_player.status_message = "ESCUDO RECARGADO".to_string();
                     }
                     PowerUpType::Health => {
@@ -928,15 +952,18 @@ fn spawn_powerup_item(commands: &mut Commands, assets: &GameAssets, pos: Vec2, k
 
 fn apply_damage_to_player(current_player: &mut ResMut<CurrentPlayer>, damage: f32) {
     if current_player.shield > 0.0 {
+        current_player.shield_hit_timer = 0.28; // Activa destello del escudo de impacto
         if current_player.shield >= damage {
             current_player.shield -= damage;
         } else {
             let leftover = damage - current_player.shield;
             current_player.shield = 0.0;
             current_player.health -= leftover;
+            current_player.hull_hit_timer = 0.18; // Destello de daño al casco
         }
     } else {
         current_player.health -= damage;
+        current_player.hull_hit_timer = 0.18; // Destello de daño al casco
     }
 }
 
