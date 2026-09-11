@@ -2324,68 +2324,63 @@ fn ui_skill_draft(
 
     let ctx = contexts.ctx_mut();
 
+    let screen_rect = ctx.screen_rect();
+    let avail_w = screen_rect.width();
+
+    // Fondo oscurecido para congelar visualmente la batalla
     egui::CentralPanel::default()
-        .frame(egui::Frame::default().fill(egui::Color32::from_rgba_unmultiplied(0, 0, 0, 160)))
+        .frame(egui::Frame::default().fill(egui::Color32::from_rgba_unmultiplied(0, 0, 0, 170)))
+        .show(ctx, |_ui| {});
+
+    // Modal de 3 cartas en posición CENTER_CENTER estática fija (0 saltos de interfaz)
+    let card_w = ((avail_w - 40.0) / 3.2).clamp(90.0, 130.0);
+    let card_h = card_w * (340.0 / 220.0);
+
+    egui::Area::new(egui::Id::new("skill_draft_modal_fixed_cards"))
+        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .show(ctx, |ui| {
-            let avail_w = ui.available_width();
-            let avail_h = ui.available_height();
+            ui.horizontal(|ui| {
+                let options = skill_draft.options.clone();
+                for &skill in &options {
+                    if let Some(&tex_id) = skill_tex_map.get(&skill) {
+                        let img_btn = ui.add(
+                            egui::Image::new(egui::load::SizedTexture::new(
+                                tex_id,
+                                egui::vec2(card_w, card_h),
+                            ))
+                            .sense(egui::Sense::click()),
+                        );
 
-            // Tamaño dinámico de cada carta (3 cartas en fila horizontal)
-            let card_w = ((avail_w - 40.0) / 3.2).clamp(90.0, 130.0);
-            let card_h = card_w * (340.0 / 220.0);
-
-            let total_w = 3.0 * card_w + 2.0 * 10.0;
-            let top_pad = ((avail_h - card_h) * 0.5).max(0.0);
-            let side_pad = ((avail_w - total_w) * 0.5).max(0.0);
-
-            ui.vertical(|ui| {
-                ui.add_space(top_pad);
-
-                ui.horizontal(|ui| {
-                    ui.add_space(side_pad);
-
-                    let options = skill_draft.options.clone();
-                    for &skill in &options {
-                        if let Some(&tex_id) = skill_tex_map.get(&skill) {
-                            let img_btn = ui.add(
-                                egui::Image::new(egui::load::SizedTexture::new(
-                                    tex_id,
-                                    egui::vec2(card_w, card_h),
-                                ))
-                                .sense(egui::Sense::click()),
-                            );
-
-                            if img_btn.clicked() {
-                                if skill.is_active() {
-                                    if !current_player.active_skills.contains(&skill) {
-                                        current_player.active_skills.push(skill);
-                                    }
-                                } else {
-                                    current_player.passive_skills.push(skill);
-                                    match skill {
-                                        SkillId::OverclockMutex => current_player.fire_rate_mult += 0.25,
-                                        SkillId::UnsafeBlock => {
-                                            current_player.damage_mult += 0.40;
-                                            current_player.max_health *= 0.85;
-                                            current_player.health = current_player.health.min(current_player.max_health);
-                                        }
-                                        SkillId::PatternMatching => current_player.crit_chance += 0.15,
-                                        SkillId::TokioReactor => current_player.speed_mult += 0.20,
-                                        SkillId::VectorCapacity => {
-                                            current_player.max_shield += 50.0;
-                                            current_player.shield += 50.0;
-                                        }
-                                        SkillId::OptionSome => current_player.powerup_drop_mult += 0.35,
-                                        SkillId::ZeroCostAbstraction => current_player.cooldown_reduction *= 0.80,
-                                        _ => {}
-                                    }
+                        if img_btn.clicked() {
+                            if skill.is_active() {
+                                if !current_player.active_skills.contains(&skill) {
+                                    current_player.active_skills.push(skill);
                                 }
-                                skill_draft.is_active = false;
+                            } else {
+                                current_player.passive_skills.push(skill);
+                                match skill {
+                                    SkillId::OverclockMutex => current_player.fire_rate_mult += 0.25,
+                                    SkillId::UnsafeBlock => {
+                                        current_player.damage_mult += 0.40;
+                                        current_player.max_health *= 0.85;
+                                        current_player.health = current_player.health.min(current_player.max_health);
+                                    }
+                                    SkillId::PatternMatching => current_player.crit_chance += 0.15,
+                                    SkillId::TokioReactor => current_player.speed_mult += 0.20,
+                                    SkillId::VectorCapacity => {
+                                        current_player.max_shield += 50.0;
+                                        current_player.shield += 50.0;
+                                    }
+                                    SkillId::OptionSome => current_player.powerup_drop_mult += 0.35,
+                                    SkillId::ZeroCostAbstraction => current_player.cooldown_reduction *= 0.80,
+                                    _ => {}
+                                }
                             }
+                            skill_draft.is_active = false;
                         }
-                        ui.add_space(10.0);
                     }
-                });
+                    ui.add_space(10.0);
+                }
             });
         });
 }
