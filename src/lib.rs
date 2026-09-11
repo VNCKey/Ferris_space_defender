@@ -88,9 +88,107 @@ impl Leaderboard {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ShipClass {
+    Standard,
+    TokioAsync,
+    MutexTank,
+}
+
+impl ShipClass {
+    pub fn name(&self) -> &'static str {
+        match self {
+            ShipClass::Standard => "FERRIS STANDARD (EQUILIBRADO)",
+            ShipClass::TokioAsync => "FERRIS TOKIO (ASYNC RUNNER)",
+            ShipClass::MutexTank => "FERRIS MUTEX (TANK CRUISER)",
+        }
+    }
+
+    pub fn short_name(&self) -> &'static str {
+        match self {
+            ShipClass::Standard => "Standard",
+            ShipClass::TokioAsync => "Tokio Async",
+            ShipClass::MutexTank => "Mutex Tank",
+        }
+    }
+
+    pub fn badge(&self) -> &'static str {
+        match self {
+            ShipClass::Standard => "STD",
+            ShipClass::TokioAsync => "TOKIO",
+            ShipClass::MutexTank => "MUTEX",
+        }
+    }
+
+    pub fn description(&self) -> &'static str {
+        match self {
+            ShipClass::Standard => "Equilibrio balanceado de velocidad (340), salud 100 y escudo 50. Disparo láser dual.",
+            ShipClass::TokioAsync => "Velocidad extrema (+25%) y cadencia rápida. Escudo más ligero (40).",
+            ShipClass::MutexTank => "Super blindaje (+50% HP y escudo), cañón de plasma pesado. Menor agilidad.",
+        }
+    }
+
+    pub fn max_health(&self) -> f32 {
+        match self {
+            ShipClass::Standard => 100.0,
+            ShipClass::TokioAsync => 80.0,
+            ShipClass::MutexTank => 150.0,
+        }
+    }
+
+    pub fn max_shield(&self) -> f32 {
+        match self {
+            ShipClass::Standard => 50.0,
+            ShipClass::TokioAsync => 40.0,
+            ShipClass::MutexTank => 85.0,
+        }
+    }
+
+    pub fn speed(&self) -> f32 {
+        match self {
+            ShipClass::Standard => 340.0,
+            ShipClass::TokioAsync => 430.0,
+            ShipClass::MutexTank => 270.0,
+        }
+    }
+
+    pub fn fire_interval(&self) -> f32 {
+        match self {
+            ShipClass::Standard => 0.18,
+            ShipClass::TokioAsync => 0.11,
+            ShipClass::MutexTank => 0.28,
+        }
+    }
+
+    pub fn laser_damage(&self) -> f32 {
+        match self {
+            ShipClass::Standard => 28.0,
+            ShipClass::TokioAsync => 18.0,
+            ShipClass::MutexTank => 55.0,
+        }
+    }
+
+    pub fn laser_color(&self) -> Color {
+        match self {
+            ShipClass::Standard => Color::srgb(0.15, 0.85, 1.0),
+            ShipClass::TokioAsync => Color::srgb(0.25, 1.0, 0.45),
+            ShipClass::MutexTank => Color::srgb(1.0, 0.80, 0.15),
+        }
+    }
+
+    pub fn laser_size(&self) -> Vec2 {
+        match self {
+            ShipClass::Standard => Vec2::new(7.0, 26.0),
+            ShipClass::TokioAsync => Vec2::new(5.5, 22.0),
+            ShipClass::MutexTank => Vec2::new(10.0, 32.0),
+        }
+    }
+}
+
 #[derive(Resource)]
 pub struct CurrentPlayer {
     pub name: String,
+    pub ship_class: ShipClass,
     pub score: u32,
     pub health: f32,
     pub max_health: f32,
@@ -115,6 +213,7 @@ impl Default for CurrentPlayer {
     fn default() -> Self {
         Self {
             name: String::new(),
+            ship_class: ShipClass::Standard,
             score: 0,
             health: 100.0,
             max_health: 100.0,
@@ -233,6 +332,7 @@ pub struct PlayerShieldVisual;
 #[derive(Component)]
 pub struct Laser {
     pub velocity: Vec2,
+    pub damage: f32,
 }
 
 #[derive(Component)]
@@ -248,6 +348,7 @@ pub struct Enemy {
     pub score_value: u32,
     pub size: f32,
     pub is_boss: bool,
+    pub is_enraged: bool,
     pub shoot_timer: f32,
     pub dir_x: f32,
 }
@@ -282,6 +383,59 @@ fn play_sound(commands: &mut Commands, source: Handle<AudioSource>, volume: f32)
         settings: PlaybackSettings::DESPAWN.with_volume(bevy::audio::Volume::new(volume)),
     });
 }
+
+#[cfg(target_os = "android")]
+pub fn trigger_vibration(duration_ms: i64) {
+    if let Some(app) = bevy::winit::ANDROID_APP.get() {
+        let vm = unsafe {
+            match jni::JavaVM::from_raw(app.vm_as_ptr().cast()) {
+                Ok(vm) => vm,
+                Err(_) => return,
+            }
+        };
+        let mut env = match vm.attach_current_thread() {
+            Ok(env) => env,
+            Err(_) => return,
+        };
+        let activity_ptr = app.activity_as_ptr() as jni::sys::jobject;
+        if activity_ptr.is_null() {
+            return;
+        }
+        let activity = unsafe { jni::objects::JObject::from_raw(activity_ptr) };
+
+        let vibrator_str = match env.new_string("vibrator") {
+            Ok(s) => s,
+            Err(_) => return,
+        };
+
+        let vibrator = match env.call_method(
+            &activity,
+            "getSystemService",
+            "(Ljava/lang/String;)Ljava/lang/Object;",
+            &[jni::objects::JValue::Object(vibrator_str.as_ref())],
+        ) {
+            Ok(val) => match val.l() {
+                Ok(obj) => obj,
+                Err(_) => return,
+            },
+            Err(_) => return,
+        };
+
+        if vibrator.as_raw().is_null() {
+            return;
+        }
+
+        let _ = env.call_method(
+            &vibrator,
+            "vibrate",
+            "(J)V",
+            &[jni::objects::JValue::Long(duration_ms)],
+        );
+    }
+}
+
+#[cfg(not(target_os = "android"))]
+pub fn trigger_vibration(_duration_ms: i64) {}
 
 // ============================================================================
 // Inicio y Setup Principal
@@ -449,23 +603,25 @@ fn setup_playing(
     mut current_player: ResMut<CurrentPlayer>,
     mut timers: ResMut<GameTimers>,
 ) {
-    current_player.health = current_player.max_health;
-    current_player.shield = 50.0;
+    current_player.max_health = current_player.ship_class.max_health();
+    current_player.health = current_player.ship_class.max_health();
+    current_player.max_shield = current_player.ship_class.max_shield();
+    current_player.shield = current_player.ship_class.max_shield();
     current_player.triple_shot_timer = 0.0;
     current_player.score = 0;
     current_player.wave = 1;
     current_player.time_elapsed = 0.0;
     current_player.enemies_killed = 0;
-    current_player.status_message = "MISION INICIADA".to_string();
-    current_player.status_timer = 2.5;
+    current_player.status_message = format!("MISION INICIADA: {}", current_player.ship_class.short_name());
+    current_player.status_timer = 2.8;
     current_player.invulnerable_timer = 0.0;
     current_player.combo_count = 0;
     current_player.combo_timer = 0.0;
     current_player.combo_multiplier = 1;
     current_player.max_combo = 0;
 
+    timers.player_shoot = Timer::from_seconds(current_player.ship_class.fire_interval(), TimerMode::Repeating);
     timers.enemy_spawn.reset();
-    timers.player_shoot.reset();
     timers.wave_timer.reset();
     timers.boss_spawn_timer.reset();
     timers.formation_timer.reset();
@@ -595,11 +751,12 @@ fn player_input_system(
     keyboard: Res<ButtonInput<KeyCode>>,
     touches: Res<Touches>,
     windows: Query<&Window>,
+    current_player: Res<CurrentPlayer>,
     mut query: Query<&mut Transform, With<Player>>,
 ) {
     if let Ok(mut transform) = query.get_single_mut() {
         let dt = time.delta_seconds();
-        let speed = 440.0;
+        let speed = current_player.ship_class.speed();
 
         if keyboard.pressed(KeyCode::ArrowLeft) || keyboard.pressed(KeyCode::KeyA) {
             transform.translation.x -= speed * dt;
@@ -618,8 +775,13 @@ fn player_input_system(
             if let Ok(window) = windows.get_single() {
                 let target_x = touch.x - window.width() * 0.5;
                 let target_y = window.height() * 0.5 - touch.y + 45.0;
-                transform.translation.x = transform.translation.x.lerp(target_x, (dt * 20.0).min(1.0));
-                transform.translation.y = transform.translation.y.lerp(target_y, (dt * 20.0).min(1.0));
+                let lerp_speed = match current_player.ship_class {
+                    ShipClass::TokioAsync => 25.0,
+                    ShipClass::Standard => 20.0,
+                    ShipClass::MutexTank => 16.0,
+                };
+                transform.translation.x = transform.translation.x.lerp(target_x, (dt * lerp_speed).min(1.0));
+                transform.translation.y = transform.translation.y.lerp(target_y, (dt * lerp_speed).min(1.0));
             }
         }
 
@@ -690,6 +852,10 @@ fn player_shoot_system(
         if let Ok(player_tr) = query.get_single() {
             play_sound(&mut commands, assets.snd_player_laser.clone(), 0.14);
             let pos = player_tr.translation;
+            let ship_class = current_player.ship_class;
+            let dmg = ship_class.laser_damage();
+            let l_color = ship_class.laser_color();
+            let l_size = ship_class.laser_size();
 
             if current_player.triple_shot_timer > 0.0 {
                 // DISPARO TRIPLE ACTIVO (3 proyectiles en abanico)
@@ -701,7 +867,7 @@ fn player_shoot_system(
                         SpriteBundle {
                             sprite: Sprite {
                                 color: Color::srgb(1.0, 0.2, 0.9), // Plasma Magenta
-                                custom_size: Some(Vec2::new(7.0, 26.0)),
+                                custom_size: Some(Vec2::new(l_size.x + 1.0, l_size.y)),
                                 ..default()
                             },
                             transform: Transform::from_xyz(pos.x + offset_x, pos.y + 24.0, 8.0),
@@ -709,17 +875,18 @@ fn player_shoot_system(
                         },
                         Laser {
                             velocity: Vec2::new(vx, vy),
+                            damage: dmg * 1.1,
                         },
                     ));
                 }
             } else {
-                // Disparo Doble Estandar
+                // Disparo Doble según Clase
                 for offset_x in &[-18.0, 18.0] {
                     commands.spawn((
                         SpriteBundle {
                             sprite: Sprite {
-                                color: Color::srgb(0.15, 0.85, 1.0),
-                                custom_size: Some(Vec2::new(7.0, 26.0)),
+                                color: l_color,
+                                custom_size: Some(l_size),
                                 ..default()
                             },
                             transform: Transform::from_xyz(pos.x + offset_x, pos.y + 24.0, 8.0),
@@ -727,6 +894,7 @@ fn player_shoot_system(
                         },
                         Laser {
                             velocity: Vec2::new(0.0, 880.0),
+                            damage: dmg,
                         },
                     ));
                 }
@@ -810,6 +978,7 @@ fn enemy_spawn_system(
                 score_value: score_val,
                 size,
                 is_boss: false,
+                is_enraged: false,
                 shoot_timer: rng.gen_range(1.5..3.0),
                 dir_x: if rng.gen_bool(0.5) { 1.0 } else { -1.0 },
             },
@@ -854,6 +1023,7 @@ fn enemy_spawn_system(
                         score_value: 120,
                         size,
                         is_boss: false,
+                        is_enraged: false,
                         shoot_timer: 4.0,
                         dir_x: 0.0,
                     },
@@ -887,6 +1057,7 @@ fn enemy_spawn_system(
                         score_value: 130,
                         size,
                         is_boss: false,
+                        is_enraged: false,
                         shoot_timer: 3.5,
                         dir_x: if ox < 0.0 { 0.3 } else { -0.3 },
                     },
@@ -941,6 +1112,7 @@ fn boss_spawn_system(
                 score_value: score_val,
                 size,
                 is_boss: true,
+                is_enraged: false,
                 shoot_timer: 1.6,
                 dir_x: 1.0,
             },
@@ -959,11 +1131,17 @@ fn enemy_movement_system(
 
     for (entity, mut transform, mut enemy) in query.iter_mut() {
         if enemy.is_boss {
+            let (boss_speed_x, shoot_interval) = if enemy.is_enraged {
+                (180.0, 0.70)
+            } else {
+                (120.0, 1.30)
+            };
+
             // Movimiento del Jefe: Baja hasta la parte superior y se mueve de lado a lado
             if transform.translation.y > 270.0 {
                 transform.translation.y -= enemy.speed * dt;
             } else {
-                transform.translation.x += enemy.dir_x * 120.0 * dt;
+                transform.translation.x += enemy.dir_x * boss_speed_x * dt;
                 if transform.translation.x > 210.0 {
                     enemy.dir_x = -1.0;
                 } else if transform.translation.x < -210.0 {
@@ -971,26 +1149,48 @@ fn enemy_movement_system(
                 }
             }
 
-            // Disparo del Jefe: Ráfaga de láseres rojos
+            // Disparo del Jefe
             enemy.shoot_timer -= dt;
             if enemy.shoot_timer <= 0.0 {
-                enemy.shoot_timer = 1.3;
+                enemy.shoot_timer = shoot_interval;
                 let boss_pos = transform.translation;
-                for &offset in &[-35.0, 0.0, 35.0] {
-                    commands.spawn((
-                        SpriteBundle {
-                            sprite: Sprite {
-                                color: Color::srgb(1.0, 0.2, 0.1), // Láser rojo enemigo
-                                custom_size: Some(Vec2::new(8.0, 24.0)),
+
+                if enemy.is_enraged {
+                    // FASE 2: MODO FURIA (Abanico de 5 disparos de plasma veloz)
+                    for &offset in &[-60.0, -30.0, 0.0, 30.0, 60.0] {
+                        commands.spawn((
+                            SpriteBundle {
+                                sprite: Sprite {
+                                    color: Color::srgb(1.0, 0.15, 0.05),
+                                    custom_size: Some(Vec2::new(9.0, 28.0)),
+                                    ..default()
+                                },
+                                transform: Transform::from_xyz(boss_pos.x + offset, boss_pos.y - 45.0, 7.0),
                                 ..default()
                             },
-                            transform: Transform::from_xyz(boss_pos.x + offset, boss_pos.y - 45.0, 7.0),
-                            ..default()
-                        },
-                        EnemyLaser {
-                            velocity: Vec2::new(offset * 2.0, -380.0),
-                        },
-                    ));
+                            EnemyLaser {
+                                velocity: Vec2::new(offset * 3.5, -440.0),
+                            },
+                        ));
+                    }
+                } else {
+                    // FASE 1: Ráfaga triple estándar
+                    for &offset in &[-35.0, 0.0, 35.0] {
+                        commands.spawn((
+                            SpriteBundle {
+                                sprite: Sprite {
+                                    color: Color::srgb(1.0, 0.35, 0.1),
+                                    custom_size: Some(Vec2::new(8.0, 24.0)),
+                                    ..default()
+                                },
+                                transform: Transform::from_xyz(boss_pos.x + offset, boss_pos.y - 45.0, 7.0),
+                                ..default()
+                            },
+                            EnemyLaser {
+                                velocity: Vec2::new(offset * 2.0, -380.0),
+                            },
+                        ));
+                    }
                 }
             }
         } else {
@@ -1102,6 +1302,7 @@ fn powerup_system(
                     PowerUpType::Nuke => {
                         screen_shake.timer = 0.32;
                         screen_shake.intensity = 8.5;
+                        trigger_vibration(250);
 
                         // 1. Limpiar todos los lásers enemigos de la pantalla
                         for laser_e in query_enemy_lasers.iter() {
@@ -1117,6 +1318,7 @@ fn powerup_system(
                                 enemy.health -= 150.0;
                                 spawn_bevy_explosion(&mut commands, e_pos);
                                 if enemy.health <= 0.0 {
+                                    trigger_vibration(280);
                                     play_sound(&mut commands, assets.snd_boss_death.clone(), 0.70);
                                     current_player.score += 1500;
                                     current_player.enemies_killed += 1;
@@ -1124,8 +1326,13 @@ fn powerup_system(
                                     spawn_floating_text(&mut commands, e_pos, "+1500 BORROW CHECKER", Color::srgb(1.0, 0.85, 0.2));
                                     commands.entity(enemy_e).despawn();
                                 } else {
+                                    if !enemy.is_enraged && enemy.health <= enemy.max_health * 0.5 {
+                                        enemy.is_enraged = true;
+                                        current_player.status_message = "ALERTA CRITICA: BORROW CHECKER EN MODO FURIA (MUT EXCLUSIVO)".to_string();
+                                    } else {
+                                        current_player.status_message = "EMP IMPACTO AL JEFE (-150 HP)".to_string();
+                                    }
                                     play_sound(&mut commands, assets.snd_enemy_death.clone(), 0.40);
-                                    current_player.status_message = "EMP IMPACTO AL JEFE (-150 HP)".to_string();
                                     spawn_floating_text(&mut commands, e_pos, "-150 EMP", Color::srgb(0.4, 0.95, 1.0));
                                 }
                             } else {
@@ -1152,7 +1359,7 @@ fn powerup_system(
             }
         }
 
-        if p_tr.translation.y < -440.0 {
+        if p_tr.translation.y < -420.0 {
             commands.entity(p_entity).despawn();
         }
     }
@@ -1171,7 +1378,7 @@ fn spawn_powerup_item(commands: &mut Commands, assets: &GameAssets, pos: Vec2, k
         SpriteBundle {
             texture,
             sprite: Sprite {
-                custom_size: Some(Vec2::splat(38.0)),
+                custom_size: Some(Vec2::splat(42.0)),
                 ..default()
             },
             transform: Transform::from_xyz(pos.x, pos.y, 8.5),
@@ -1201,6 +1408,7 @@ fn apply_damage_to_player(
     current_player.combo_count = 0;
     current_player.combo_multiplier = 1;
 
+    trigger_vibration(50);
     play_sound(commands, assets.snd_player_damage.clone(), 0.40);
     if current_player.shield > 0.0 {
         current_player.shield_hit_timer = 0.28;
@@ -1226,14 +1434,14 @@ fn collision_system(
     mut next_state: ResMut<NextState<AppState>>,
     mut leaderboard: ResMut<Leaderboard>,
     mut query_enemies: Query<(Entity, &Transform, &mut Enemy)>,
-    query_lasers: Query<(Entity, &Transform), With<Laser>>,
+    query_lasers: Query<(Entity, &Transform, &Laser)>,
     query_enemy_lasers: Query<(Entity, &Transform), With<EnemyLaser>>,
     query_player: Query<&Transform, With<Player>>,
 ) {
     let mut rng = rand::thread_rng();
 
     // 1. Láseres del Jugador vs Enemigos / Jefes
-    for (laser_entity, laser_tr) in query_lasers.iter() {
+    for (laser_entity, laser_tr, laser) in query_lasers.iter() {
         let l_pos = laser_tr.translation.truncate();
 
         for (enemy_entity, enemy_tr, mut enemy) in query_enemies.iter_mut() {
@@ -1242,7 +1450,23 @@ fn collision_system(
 
             if l_pos.distance(e_pos) < hit_radius {
                 commands.entity(laser_entity).despawn();
-                enemy.health -= 35.0;
+                enemy.health -= laser.damage;
+
+                // FASE 2 de Jefe: Modo Furia al 50% de HP
+                if enemy.is_boss && !enemy.is_enraged && enemy.health <= enemy.max_health * 0.5 && enemy.health > 0.0 {
+                    enemy.is_enraged = true;
+                    current_player.status_message = "ALERTA CRITICA: BORROW CHECKER EN MODO FURIA (MUT EXCLUSIVO)".to_string();
+                    current_player.status_timer = 4.0;
+                    screen_shake.timer = 0.28;
+                    screen_shake.intensity = 6.5;
+                    trigger_vibration(180);
+                    spawn_floating_text(
+                        &mut commands,
+                        e_pos,
+                        "FASE 2: MODO FURIA",
+                        Color::srgb(1.0, 0.2, 0.1),
+                    );
+                }
 
                 if enemy.health <= 0.0 {
                     // Sistema de Combos
@@ -1298,6 +1522,7 @@ fn collision_system(
                     if enemy.is_boss {
                         screen_shake.timer = 0.35;
                         screen_shake.intensity = 9.5;
+                        trigger_vibration(280);
                         play_sound(&mut commands, assets.snd_boss_death.clone(), 0.70);
                         current_player.status_message = "BORROW CHECKER SUPERADO (+1500 PTS)".to_string();
                         current_player.status_timer = 3.0;
@@ -1350,6 +1575,7 @@ fn collision_system(
     // Comprobar Game Over
     if current_player.health <= 0.0 {
         current_player.health = 0.0;
+        trigger_vibration(400);
         play_sound(&mut commands, assets.snd_player_death.clone(), 0.85);
         leaderboard.add_score(
             current_player.name.clone(),
@@ -1749,6 +1975,70 @@ fn ui_name_input(
                                         }
                                     });
 
+                                    ui.add_space(8.0);
+                                    ui.label(
+                                        egui::RichText::new("SELECCION DE ARQUETIPO DE NAVE")
+                                            .size(12.5)
+                                            .color(egui::Color32::from_rgb(180, 215, 255))
+                                            .strong(),
+                                    );
+                                    ui.add_space(4.0);
+
+                                    ui.horizontal(|ui| {
+                                        let is_std = current_player.ship_class == ShipClass::Standard;
+                                        let is_tokio = current_player.ship_class == ShipClass::TokioAsync;
+                                        let is_tank = current_player.ship_class == ShipClass::MutexTank;
+
+                                        if ui.add(
+                                            egui::Button::new(
+                                                egui::RichText::new("STANDARD\n(Balance)")
+                                                    .size(11.0)
+                                                    .color(if is_std { egui::Color32::WHITE } else { egui::Color32::GRAY })
+                                                    .strong(),
+                                            )
+                                            .min_size(egui::vec2(86.0, 36.0))
+                                            .fill(if is_std { egui::Color32::from_rgb(30, 110, 190) } else { egui::Color32::from_rgb(20, 24, 36) })
+                                            .stroke(egui::Stroke::new(if is_std { 1.5_f32 } else { 0.5_f32 }, if is_std { egui::Color32::from_rgb(0, 220, 255) } else { egui::Color32::DARK_GRAY })),
+                                        ).clicked() {
+                                            current_player.ship_class = ShipClass::Standard;
+                                        }
+
+                                        if ui.add(
+                                            egui::Button::new(
+                                                egui::RichText::new("TOKIO\n(Velocidad)")
+                                                    .size(11.0)
+                                                    .color(if is_tokio { egui::Color32::WHITE } else { egui::Color32::GRAY })
+                                                    .strong(),
+                                            )
+                                            .min_size(egui::vec2(86.0, 36.0))
+                                            .fill(if is_tokio { egui::Color32::from_rgb(25, 130, 65) } else { egui::Color32::from_rgb(20, 24, 36) })
+                                            .stroke(egui::Stroke::new(if is_tokio { 1.5_f32 } else { 0.5_f32 }, if is_tokio { egui::Color32::GREEN } else { egui::Color32::DARK_GRAY })),
+                                        ).clicked() {
+                                            current_player.ship_class = ShipClass::TokioAsync;
+                                        }
+
+                                        if ui.add(
+                                            egui::Button::new(
+                                                egui::RichText::new("MUTEX\n(Tanque)")
+                                                    .size(11.0)
+                                                    .color(if is_tank { egui::Color32::WHITE } else { egui::Color32::GRAY })
+                                                    .strong(),
+                                            )
+                                            .min_size(egui::vec2(86.0, 36.0))
+                                            .fill(if is_tank { egui::Color32::from_rgb(170, 110, 20) } else { egui::Color32::from_rgb(20, 24, 36) })
+                                            .stroke(egui::Stroke::new(if is_tank { 1.5_f32 } else { 0.5_f32 }, if is_tank { egui::Color32::from_rgb(255, 215, 0) } else { egui::Color32::DARK_GRAY })),
+                                        ).clicked() {
+                                            current_player.ship_class = ShipClass::MutexTank;
+                                        }
+                                    });
+
+                                    ui.add_space(3.0);
+                                    ui.label(
+                                        egui::RichText::new(current_player.ship_class.description())
+                                            .size(10.5)
+                                            .color(egui::Color32::from_rgb(180, 200, 220)),
+                                    );
+
                                     ui.add_space(10.0);
 
                                     let btn_start = ui.add(
@@ -1824,7 +2114,7 @@ fn ui_playing_hud(
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.label(
-                    egui::RichText::new(format!("PILOTO: {}", current_player.name))
+                    egui::RichText::new(format!("PILOTO: {} [{}]", current_player.name, current_player.ship_class.badge()))
                         .color(egui::Color32::WHITE)
                         .strong(),
                 );
@@ -1899,15 +2189,20 @@ fn ui_playing_hud(
             for enemy in boss_query.iter() {
                 if enemy.is_boss {
                     let boss_frac = (enemy.health / enemy.max_health).clamp(0.0, 1.0);
+                    let (boss_title, bar_color) = if enemy.is_enraged {
+                        ("JEFE (FASE 2: FURIA):", egui::Color32::from_rgb(255, 60, 20))
+                    } else {
+                        ("JEFE (BORROW CHECKER):", egui::Color32::from_rgb(255, 40, 40))
+                    };
                     ui.horizontal(|ui| {
                         ui.label(
-                            egui::RichText::new("JEFE NODRIZA:")
-                                .color(egui::Color32::from_rgb(255, 50, 50))
+                            egui::RichText::new(boss_title)
+                                .color(bar_color)
                                 .strong(),
                         );
                         ui.add(
                             egui::ProgressBar::new(boss_frac)
-                                .fill(egui::Color32::from_rgb(255, 30, 30))
+                                .fill(bar_color)
                                 .desired_width(180.0),
                         );
                         ui.label(format!("{:.0}%", boss_frac * 100.0));
@@ -2042,13 +2337,15 @@ fn ui_game_over(
                                 );
                                 ui.add_space(6.0);
                                 ui.horizontal(|ui| {
-                                    ui.label(egui::RichText::new(format!("Enemigos: {}", current_player.enemies_killed)).size(12.0).color(egui::Color32::WHITE));
+                                    ui.label(egui::RichText::new(format!("Nave: {}", current_player.ship_class.short_name())).size(12.0).color(egui::Color32::from_rgb(175, 215, 255)));
+                                    ui.label(egui::RichText::new("|").color(egui::Color32::GRAY));
+                                    ui.label(egui::RichText::new(format!("Bajas: {}", current_player.enemies_killed)).size(12.0).color(egui::Color32::WHITE));
                                     ui.label(egui::RichText::new("|").color(egui::Color32::GRAY));
                                     ui.label(egui::RichText::new(format!("Max Combo: x{}", current_player.max_combo)).size(12.0).color(egui::Color32::from_rgb(255, 215, 0)).strong());
                                     ui.label(egui::RichText::new("|").color(egui::Color32::GRAY));
                                     ui.label(egui::RichText::new(format!("Tiempo: {:.0}s", current_player.time_elapsed)).size(12.0).color(egui::Color32::WHITE));
                                     ui.label(egui::RichText::new("|").color(egui::Color32::GRAY));
-                                    ui.label(egui::RichText::new(format!("Oleada: {}", current_player.wave)).size(12.0).color(egui::Color32::WHITE));
+                                    ui.label(egui::RichText::new(format!("Ola: {}", current_player.wave)).size(12.0).color(egui::Color32::WHITE));
                                 });
                             });
 

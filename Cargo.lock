@@ -1861,6 +1861,7 @@ dependencies = [
  "android-activity",
  "bevy",
  "bevy_egui",
+ "jni 0.21.1",
  "rand",
  "serde",
  "serde_json",
