@@ -904,8 +904,9 @@ fn powerup_system(
     assets: Res<GameAssets>,
     mut current_player: ResMut<CurrentPlayer>,
     mut query_powerups: Query<(Entity, &mut Transform, &PowerUpItem)>,
-    query_player: Query<&Transform, (With<Player>, Without<PowerUpItem>)>,
-    all_regular_enemies: Query<Entity, (With<Enemy>, Without<Player>)>,
+    query_player: Query<&Transform, (With<Player>, Without<PowerUpItem>, Without<Enemy>)>,
+    mut query_enemies: Query<(Entity, &mut Enemy, &Transform), (Without<Player>, Without<PowerUpItem>)>,
+    query_enemy_lasers: Query<Entity, With<EnemyLaser>>,
 ) {
     let dt = time.delta_seconds();
 
@@ -936,12 +937,43 @@ fn powerup_system(
                         current_player.status_message = "CASCO REPARADO +40".to_string();
                     }
                     PowerUpType::Nuke => {
-                        for enemy_e in all_regular_enemies.iter() {
-                            commands.entity(enemy_e).despawn_recursive();
+                        // 1. Limpiar todos los lásers enemigos de la pantalla
+                        for laser_e in query_enemy_lasers.iter() {
+                            commands.entity(laser_e).despawn();
                         }
+
+                        // 2. Destruir enemigos comunes y aplicar daño masivo (150) a Jefes
+                        let mut hit_boss = false;
+                        for (enemy_e, mut enemy, enemy_tr) in query_enemies.iter_mut() {
+                            let e_pos = enemy_tr.translation.truncate();
+                            if enemy.is_boss {
+                                hit_boss = true;
+                                enemy.health -= 150.0;
+                                spawn_bevy_explosion(&mut commands, e_pos);
+                                if enemy.health <= 0.0 {
+                                    play_sound(&mut commands, assets.snd_boss_death.clone(), 0.90);
+                                    current_player.score += 1500;
+                                    current_player.enemies_killed += 1;
+                                    current_player.status_message = "JEFE ANIQUILADO CON EMP (+1500 PTS)".to_string();
+                                    commands.entity(enemy_e).despawn();
+                                } else {
+                                    play_sound(&mut commands, assets.snd_enemy_death.clone(), 0.70);
+                                    current_player.status_message = "EMP IMPACTO AL JEFE (-150 HP)".to_string();
+                                }
+                            } else {
+                                spawn_bevy_explosion(&mut commands, e_pos);
+                                play_sound(&mut commands, assets.snd_enemy_death.clone(), 0.45);
+                                current_player.score += 75;
+                                current_player.enemies_killed += 1;
+                                commands.entity(enemy_e).despawn();
+                            }
+                        }
+
                         spawn_bevy_explosion(&mut commands, Vec2::ZERO);
-                        current_player.score += 500;
-                        current_player.status_message = "BOMBA EMP DETONADA".to_string();
+                        if !hit_boss {
+                            current_player.score += 300;
+                            current_player.status_message = "BOMBA EMP DETONADA".to_string();
+                        }
                     }
                 }
                 play_sound(&mut commands, assets.snd_powerup_pickup.clone(), 0.75);
