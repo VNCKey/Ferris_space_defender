@@ -101,6 +101,130 @@ pub enum ShipClass {
     Artillero,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ClassAbility {
+    BastionProtocol,
+    KineticPulse,
+    HeavyOverdrive,
+    ArcaneNova,
+    ZeroCostBeam,
+    AetherShield,
+    PhaseShift,
+    TwinFang,
+    HunterMark,
+    MissileSalvo,
+    CargoBombardment,
+    FortifyArmor,
+}
+
+impl ClassAbility {
+    pub fn name(&self) -> &'static str {
+        match self {
+            ClassAbility::BastionProtocol => "BASTIÓN",
+            ClassAbility::KineticPulse => "PULSO CINÉTICO",
+            ClassAbility::HeavyOverdrive => "SOBRECARGA",
+            ClassAbility::ArcaneNova => "NOVA ARCANA",
+            ClassAbility::ZeroCostBeam => "RAYO ZERO-COST",
+            ClassAbility::AetherShield => "ESCUDO ÉTER",
+            ClassAbility::PhaseShift => "FASE ASÍNCRONA",
+            ClassAbility::TwinFang => "COLMILLO DOBLE",
+            ClassAbility::HunterMark => "MARCA DEL CAZADOR",
+            ClassAbility::MissileSalvo => "SALVA DE MISILES",
+            ClassAbility::CargoBombardment => "BOMBARDEO CARGO",
+            ClassAbility::FortifyArmor => "BLINDAJE CARGO",
+        }
+    }
+
+    pub fn cooldown(&self) -> f32 {
+        match self {
+            ClassAbility::BastionProtocol => 16.0,
+            ClassAbility::KineticPulse => 22.0,
+            ClassAbility::HeavyOverdrive => 18.0,
+            ClassAbility::ArcaneNova => 16.0,
+            ClassAbility::ZeroCostBeam => 25.0,
+            ClassAbility::AetherShield => 20.0,
+            ClassAbility::PhaseShift => 14.0,
+            ClassAbility::TwinFang => 17.0,
+            ClassAbility::HunterMark => 19.0,
+            ClassAbility::MissileSalvo => 15.0,
+            ClassAbility::CargoBombardment => 23.0,
+            ClassAbility::FortifyArmor => 18.0,
+        }
+    }
+
+    pub fn cooldown_for_level(&self, level: u8) -> f32 {
+        let reduction = 1.0 - (level.min(3) as f32 * 0.10);
+        self.cooldown() * reduction
+    }
+
+    pub fn description(&self) -> &'static str {
+        match self {
+            ClassAbility::BastionProtocol => {
+                "Recarga 65 de escudo y reduce el daño recibido durante 5 s."
+            }
+            ClassAbility::KineticPulse => {
+                "Pulso pesado que limpia enemigos normales y daña al jefe."
+            }
+            ClassAbility::HeavyOverdrive => "Cañón pesado: +75% cadencia y +25% daño durante 5 s.",
+            ClassAbility::ArcaneNova => {
+                "Libera una corona de 12 orbes arcanos alrededor de la nave."
+            }
+            ClassAbility::ZeroCostBeam => "Rayo continuo de plasma durante 3 s.",
+            ClassAbility::AetherShield => {
+                "Restaura escudo y vuelve invulnerable a la nave durante 1.5 s."
+            }
+            ClassAbility::PhaseShift => {
+                "Desplazamiento de fase: velocidad extrema e invulnerabilidad durante 2 s."
+            }
+            ClassAbility::TwinFang => {
+                "Duplica la cadencia y potencia las dos líneas verdes durante 4 s."
+            }
+            ClassAbility::HunterMark => "Aumenta mucho la probabilidad de críticos durante 6 s.",
+            ClassAbility::MissileSalvo => "Lanza 5 misiles rojos en abanico con daño masivo.",
+            ClassAbility::CargoBombardment => {
+                "Bombardeo EMP que elimina enemigos y proyectiles enemigos."
+            }
+            ClassAbility::FortifyArmor => {
+                "Repara casco, recarga escudo y reduce el daño durante 4 s."
+            }
+        }
+    }
+
+    pub fn color_rgb(&self) -> [u8; 3] {
+        match self {
+            ClassAbility::BastionProtocol
+            | ClassAbility::KineticPulse
+            | ClassAbility::HeavyOverdrive => [255, 190, 35],
+            ClassAbility::ArcaneNova | ClassAbility::ZeroCostBeam | ClassAbility::AetherShield => {
+                [55, 210, 255]
+            }
+            ClassAbility::PhaseShift | ClassAbility::TwinFang | ClassAbility::HunterMark => {
+                [65, 255, 125]
+            }
+            ClassAbility::MissileSalvo
+            | ClassAbility::CargoBombardment
+            | ClassAbility::FortifyArmor => [255, 90, 50],
+        }
+    }
+
+    pub fn texture_key(&self) -> &'static str {
+        match self {
+            ClassAbility::BastionProtocol => "bastion_protocol",
+            ClassAbility::KineticPulse => "kinetic_pulse",
+            ClassAbility::HeavyOverdrive => "heavy_overdrive",
+            ClassAbility::ArcaneNova => "arcane_nova",
+            ClassAbility::ZeroCostBeam => "zero_cost_beam",
+            ClassAbility::AetherShield => "aether_shield",
+            ClassAbility::PhaseShift => "phase_shift",
+            ClassAbility::TwinFang => "twin_fang",
+            ClassAbility::HunterMark => "hunter_mark",
+            ClassAbility::MissileSalvo => "missile_salvo",
+            ClassAbility::CargoBombardment => "cargo_bombardment",
+            ClassAbility::FortifyArmor => "fortify_armor",
+        }
+    }
+}
+
 impl ShipClass {
     pub fn name(&self) -> &'static str {
         match self {
@@ -126,6 +250,31 @@ impl ShipClass {
             ShipClass::Mago => "MAGO",
             ShipClass::Asesino => "ASESINO",
             ShipClass::Artillero => "ARTILLERO",
+        }
+    }
+
+    pub fn class_abilities(&self) -> [ClassAbility; 3] {
+        match self {
+            ShipClass::Defensor => [
+                ClassAbility::BastionProtocol,
+                ClassAbility::KineticPulse,
+                ClassAbility::HeavyOverdrive,
+            ],
+            ShipClass::Mago => [
+                ClassAbility::ArcaneNova,
+                ClassAbility::ZeroCostBeam,
+                ClassAbility::AetherShield,
+            ],
+            ShipClass::Asesino => [
+                ClassAbility::PhaseShift,
+                ClassAbility::TwinFang,
+                ClassAbility::HunterMark,
+            ],
+            ShipClass::Artillero => [
+                ClassAbility::MissileSalvo,
+                ClassAbility::CargoBombardment,
+                ClassAbility::FortifyArmor,
+            ],
         }
     }
 
@@ -263,21 +412,39 @@ impl SkillId {
     pub fn description(&self) -> &'static str {
         match self {
             SkillId::OverclockMutex => "PASIVA: +25% Cadencia de Fuego del Láser.",
-            SkillId::AsyncMultithread => "PASIVA: +20% Velocidad de Proyectil y +1 Línea Láser adicional.",
-            SkillId::ZeroCostBeam => "ACTIVABLE (BOTON): Emite un rayo de plasma devastador continuo por 3s.",
-            SkillId::UnsafeBlock => "PASIVA: +40% Daño de Disparo pero reduce Salud Máxima en -15%.",
-            SkillId::BorrowChecker => "PASIVA: Refleja un 25% del daño recibido hacia los enemigos cercanos.",
+            SkillId::AsyncMultithread => {
+                "PASIVA: +20% Velocidad de Proyectil y +1 Línea Láser adicional."
+            }
+            SkillId::ZeroCostBeam => {
+                "ACTIVABLE (BOTON): Emite un rayo de plasma devastador continuo por 3s."
+            }
+            SkillId::UnsafeBlock => {
+                "PASIVA: +40% Daño de Disparo pero reduce Salud Máxima en -15%."
+            }
+            SkillId::BorrowChecker => {
+                "PASIVA: Refleja un 25% del daño recibido hacia los enemigos cercanos."
+            }
             SkillId::PatternMatching => "PASIVA: +15% Probabilidad de Golpe Crítico (3x daño).",
-            SkillId::CargoClean => "ACTIVABLE (BOTON): Onda expansiva EMP que borra disparos y enemigos débiles.",
+            SkillId::CargoClean => {
+                "ACTIVABLE (BOTON): Onda expansiva EMP que borra disparos y enemigos débiles."
+            }
             SkillId::ArcMutex => "PASIVA: Genera un mini-escudo orbitatorio que bloquea disparos.",
             SkillId::TokioReactor => "PASIVA: +20% Velocidad de movimiento de la nave.",
             SkillId::VectorCapacity => "PASIVA: +50 Puntos de Escudo Máximo.",
-            SkillId::PanicRecovery => "PASIVA: Invulnerabilidad de 2.5s al recibir daño mortal (1 vez).",
-            SkillId::MutexOverdrive => "PASIVA: +30% Daño total cuando el escudo está agotado (0 HP).",
+            SkillId::PanicRecovery => {
+                "PASIVA: Invulnerabilidad de 2.5s al recibir daño mortal (1 vez)."
+            }
+            SkillId::MutexOverdrive => {
+                "PASIVA: +30% Daño total cuando el escudo está agotado (0 HP)."
+            }
             SkillId::StaticLifetime => "PASIVA: Regenera 1% de Salud del casco por segundo.",
-            SkillId::MacroRules => "PASIVA: Incrementa el área de impacto y tamaño de los proyectiles.",
+            SkillId::MacroRules => {
+                "PASIVA: Incrementa el área de impacto y tamaño de los proyectiles."
+            }
             SkillId::OptionSome => "PASIVA: +35% Frecuencia de caída de Íconos Power-Up.",
-            SkillId::ZeroCostAbstraction => "PASIVA: Reduce los tiempos de recarga de habilidades en -20%.",
+            SkillId::ZeroCostAbstraction => {
+                "PASIVA: Reduce los tiempos de recarga de habilidades en -20%."
+            }
         }
     }
 
@@ -336,6 +503,12 @@ pub struct CurrentPlayer {
     pub combo_multiplier: u32,
     pub max_combo: u32,
 
+    // Experiencia y niveles independientes de las 3 habilidades de clase
+    pub experience: u32,
+    pub experience_to_next: u32,
+    pub class_upgrade_count: u8,
+    pub class_ability_levels: [u8; 3],
+
     // Habilidades Equipadas
     pub active_skills: Vec<SkillId>,
     pub passive_skills: Vec<SkillId>,
@@ -344,6 +517,19 @@ pub struct CurrentPlayer {
     pub beam_active_timer: f32,
     pub panic_recovery_used: bool,
 
+    // Habilidades propias de la clase seleccionada
+    pub class_ability_cooldowns: [f32; 3],
+    pub damage_reduction_timer: f32,
+    pub damage_reduction_mult: f32,
+    pub class_fire_rate_timer: f32,
+    pub class_fire_rate_mult: f32,
+    pub class_damage_timer: f32,
+    pub class_damage_mult: f32,
+    pub class_speed_timer: f32,
+    pub class_speed_mult: f32,
+    pub hunter_mark_timer: f32,
+    pub hunter_mark_crit_bonus: f32,
+
     // Multiplicadores
     pub fire_rate_mult: f32,
     pub damage_mult: f32,
@@ -351,6 +537,25 @@ pub struct CurrentPlayer {
     pub speed_mult: f32,
     pub cooldown_reduction: f32,
     pub powerup_drop_mult: f32,
+}
+
+fn class_ability_upgrade_cost(level: u8) -> u32 {
+    match level.min(3) {
+        0 => 8,
+        1 => 16,
+        2 => 24,
+        _ => u32::MAX,
+    }
+}
+
+fn refresh_experience_target(current_player: &mut CurrentPlayer) {
+    current_player.experience_to_next = current_player
+        .class_ability_levels
+        .iter()
+        .filter(|&&level| level < 3)
+        .map(|&level| class_ability_upgrade_cost(level))
+        .min()
+        .unwrap_or(0);
 }
 
 impl Default for CurrentPlayer {
@@ -377,12 +582,29 @@ impl Default for CurrentPlayer {
             combo_multiplier: 1,
             max_combo: 0,
 
+            experience: 0,
+            experience_to_next: 8,
+            class_upgrade_count: 0,
+            class_ability_levels: [0; 3],
+
             active_skills: Vec::new(),
             passive_skills: Vec::new(),
             active_cooldown_1: 0.0,
             active_cooldown_2: 0.0,
             beam_active_timer: 0.0,
             panic_recovery_used: false,
+
+            class_ability_cooldowns: [0.0; 3],
+            damage_reduction_timer: 0.0,
+            damage_reduction_mult: 1.0,
+            class_fire_rate_timer: 0.0,
+            class_fire_rate_mult: 1.0,
+            class_damage_timer: 0.0,
+            class_damage_mult: 1.0,
+            class_speed_timer: 0.0,
+            class_speed_mult: 1.0,
+            hunter_mark_timer: 0.0,
+            hunter_mark_crit_bonus: 0.0,
 
             fire_rate_mult: 1.0,
             damage_mult: 1.0,
@@ -418,6 +640,7 @@ pub struct GameAssets {
     pub powerup_shield: Handle<Image>,
     pub powerup_health: Handle<Image>,
     pub powerup_nuke: Handle<Image>,
+    pub experience_orb: Handle<Image>,
     pub regular_enemies: Vec<Handle<Image>>,
     pub boss_enemies: Vec<Handle<Image>>,
     pub planets: Vec<Handle<Image>>,
@@ -440,6 +663,8 @@ pub struct GameAssets {
 
     // Cartas de Habilidades
     pub skill_textures: HashMap<SkillId, Handle<Image>>,
+    // Iconos de habilidades propias de cada clase
+    pub class_ability_textures: HashMap<ClassAbility, Handle<Image>>,
 
     // Efectos de Sonido
     pub snd_player_laser: Handle<AudioSource>,
@@ -449,6 +674,8 @@ pub struct GameAssets {
     pub snd_boss_death: Handle<AudioSource>,
     pub snd_powerup_pickup: Handle<AudioSource>,
     pub bgm_space: Handle<AudioSource>,
+    pub menu_music: Handle<AudioSource>,
+    pub game_over_music: Handle<AudioSource>,
 }
 
 #[derive(Resource)]
@@ -504,6 +731,12 @@ pub struct FloatingText {
 pub struct BackgroundMusic;
 
 #[derive(Component)]
+pub struct MenuMusic;
+
+#[derive(Component)]
+pub struct GameOverMusic;
+
+#[derive(Component)]
 pub struct Player;
 
 #[derive(Component)]
@@ -541,6 +774,13 @@ pub struct Enemy {
 pub struct PowerUpItem {
     pub kind: PowerUpType,
     pub speed: f32,
+}
+
+#[derive(Component)]
+pub struct ExperienceOrb {
+    pub value: u32,
+    pub speed: f32,
+    pub pulse_phase: f32,
 }
 
 #[derive(Component)]
@@ -648,8 +888,15 @@ pub fn run() {
         .init_resource::<SkillDraftOptions>()
         .insert_resource(ClearColor(Color::srgb(0.0, 0.0, 0.0)))
         .add_systems(Startup, setup_app)
+        .add_systems(Update, menu_world_visibility)
         .add_systems(Update, ui_name_input.run_if(in_state(AppState::NameInput)))
         .add_systems(Update, ui_game_over.run_if(in_state(AppState::GameOver)))
+        // El estado inicial puede entrar a NameInput antes de que Startup haya
+        // insertado GameAssets. Ejecutamos también después de setup_app y el
+        // sistema evita duplicar la música si ambos eventos coinciden.
+        .add_systems(Startup, setup_menu_music.after(setup_app))
+        .add_systems(OnEnter(AppState::NameInput), setup_menu_music)
+        .add_systems(OnExit(AppState::NameInput), cleanup_menu_music)
         .add_systems(OnEnter(AppState::Playing), setup_playing)
         .add_systems(
             Update,
@@ -672,6 +919,7 @@ pub fn run() {
             (
                 enemy_movement_system,
                 powerup_system,
+                experience_orb_system,
                 collision_system,
                 particle_system,
                 planet_system,
@@ -679,11 +927,14 @@ pub fn run() {
                 difficulty_and_wave_system,
                 shield_visual_system,
                 passive_skills_system,
+                class_ability_touch_system,
                 ui_playing_hud,
                 ui_skill_draft,
             )
                 .run_if(in_state(AppState::Playing)),
         )
+        .add_systems(OnEnter(AppState::GameOver), setup_game_over_music)
+        .add_systems(OnExit(AppState::GameOver), cleanup_game_over_music)
         .add_systems(OnExit(AppState::Playing), cleanup_playing)
         .run();
 }
@@ -706,6 +957,7 @@ fn setup_app(
     let powerup_shield = asset_server.load("textures/powerups/shield.png");
     let powerup_health = asset_server.load("textures/powerups/health.png");
     let powerup_nuke = asset_server.load("textures/powerups/nuke.png");
+    let experience_orb = asset_server.load("textures/effects/experience_orb.png");
 
     // Texturas de Clases
     let card_defensor = asset_server.load("textures/classes/card_defensor.png");
@@ -726,17 +978,50 @@ fn setup_app(
 
     // Cargar 16 Cartas de Habilidades
     let all_skills = [
-        SkillId::OverclockMutex, SkillId::AsyncMultithread, SkillId::ZeroCostBeam,
-        SkillId::UnsafeBlock, SkillId::BorrowChecker, SkillId::PatternMatching,
-        SkillId::CargoClean, SkillId::ArcMutex, SkillId::TokioReactor,
-        SkillId::VectorCapacity, SkillId::PanicRecovery, SkillId::MutexOverdrive,
-        SkillId::StaticLifetime, SkillId::MacroRules, SkillId::OptionSome,
+        SkillId::OverclockMutex,
+        SkillId::AsyncMultithread,
+        SkillId::ZeroCostBeam,
+        SkillId::UnsafeBlock,
+        SkillId::BorrowChecker,
+        SkillId::PatternMatching,
+        SkillId::CargoClean,
+        SkillId::ArcMutex,
+        SkillId::TokioReactor,
+        SkillId::VectorCapacity,
+        SkillId::PanicRecovery,
+        SkillId::MutexOverdrive,
+        SkillId::StaticLifetime,
+        SkillId::MacroRules,
+        SkillId::OptionSome,
         SkillId::ZeroCostAbstraction,
     ];
     let mut skill_textures = HashMap::new();
     for skill in all_skills {
         let handle = asset_server.load(format!("textures/skills/{}.png", skill.texture_key()));
         skill_textures.insert(skill, handle);
+    }
+
+    let all_class_abilities = [
+        ClassAbility::BastionProtocol,
+        ClassAbility::KineticPulse,
+        ClassAbility::HeavyOverdrive,
+        ClassAbility::ArcaneNova,
+        ClassAbility::ZeroCostBeam,
+        ClassAbility::AetherShield,
+        ClassAbility::PhaseShift,
+        ClassAbility::TwinFang,
+        ClassAbility::HunterMark,
+        ClassAbility::MissileSalvo,
+        ClassAbility::CargoBombardment,
+        ClassAbility::FortifyArmor,
+    ];
+    let mut class_ability_textures = HashMap::new();
+    for ability in all_class_abilities {
+        let handle = asset_server.load(format!(
+            "textures/class_abilities/{}.png",
+            ability.texture_key()
+        ));
+        class_ability_textures.insert(ability, handle);
     }
 
     // Efectos de Sonido
@@ -747,6 +1032,8 @@ fn setup_app(
     let snd_boss_death = asset_server.load("audio/boss_death.ogg");
     let snd_powerup_pickup = asset_server.load("audio/powerup_pickup.ogg");
     let bgm_space = asset_server.load("audio/bgm_space.ogg");
+    let menu_music = asset_server.load("audio/menu_flags.ogg");
+    let game_over_music = asset_server.load("audio/game_over_mystical.ogg");
 
     // 7 Enemigos regulares
     let mut regular_enemies = Vec::new();
@@ -773,6 +1060,7 @@ fn setup_app(
         powerup_shield,
         powerup_health,
         powerup_nuke,
+        experience_orb,
         regular_enemies,
         boss_enemies,
         planets,
@@ -789,6 +1077,7 @@ fn setup_app(
         rank_b,
         rank_c,
         skill_textures,
+        class_ability_textures,
         snd_player_laser,
         snd_player_death,
         snd_player_damage,
@@ -796,6 +1085,8 @@ fn setup_app(
         snd_boss_death,
         snd_powerup_pickup,
         bgm_space,
+        menu_music,
+        game_over_music,
     });
 
     // Campo de estrellas cósmicas
@@ -805,11 +1096,23 @@ fn setup_app(
         let y = rng.gen_range(-650.0..650.0);
         let tier = rng.gen_range(0..10);
         let (speed, size, alpha) = if tier < 6 {
-            (rng.gen_range(16.0..35.0), rng.gen_range(1.2..2.0), rng.gen_range(0.35..0.65))
+            (
+                rng.gen_range(16.0..35.0),
+                rng.gen_range(1.2..2.0),
+                rng.gen_range(0.35..0.65),
+            )
         } else if tier < 9 {
-            (rng.gen_range(40.0..75.0), rng.gen_range(2.0..2.8), rng.gen_range(0.70..0.90))
+            (
+                rng.gen_range(40.0..75.0),
+                rng.gen_range(2.0..2.8),
+                rng.gen_range(0.70..0.90),
+            )
         } else {
-            (rng.gen_range(85.0..140.0), rng.gen_range(2.8..4.0), rng.gen_range(0.85..1.0))
+            (
+                rng.gen_range(85.0..140.0),
+                rng.gen_range(2.8..4.0),
+                rng.gen_range(0.85..1.0),
+            )
         };
 
         commands.spawn((
@@ -819,6 +1122,10 @@ fn setup_app(
                     custom_size: Some(Vec2::splat(size)),
                     ..default()
                 },
+                // El campo de nombre se dibuja con egui. Mantener el mundo 2D
+                // oculto en los menús evita que Android muestre un frame de la
+                // escena al cambiar el tamaño de la ventana por el teclado.
+                visibility: Visibility::Hidden,
                 transform: Transform::from_xyz(x, y, -20.0),
                 ..default()
             },
@@ -827,15 +1134,84 @@ fn setup_app(
     }
 }
 
+fn menu_world_visibility(
+    state: Res<State<AppState>>,
+    mut visibility_queries: ParamSet<(
+        Query<&mut Visibility, With<BackgroundStar>>,
+        Query<&mut Visibility, With<BackgroundPlanet>>,
+    )>,
+) {
+    let show_world = *state.get() == AppState::Playing;
+    let visibility = if show_world {
+        Visibility::Visible
+    } else {
+        Visibility::Hidden
+    };
+
+    for mut star_visibility in visibility_queries.p0().iter_mut() {
+        *star_visibility = visibility;
+    }
+    for mut planet_visibility in visibility_queries.p1().iter_mut() {
+        *planet_visibility = visibility;
+    }
+}
+
 // ============================================================================
 // Setup Playing
 // ============================================================================
+
+fn setup_menu_music(
+    mut commands: Commands,
+    assets: Option<Res<GameAssets>>,
+    existing: Query<(), With<MenuMusic>>,
+) {
+    if !existing.is_empty() {
+        return;
+    }
+
+    let Some(assets) = assets else {
+        // En el primer OnEnter(NameInput), GameAssets todavía puede no existir.
+        // El sistema Startup.after(setup_app) se encargará de crear la música.
+        return;
+    };
+
+    commands.spawn((
+        AudioBundle {
+            source: assets.menu_music.clone(),
+            settings: PlaybackSettings::LOOP.with_volume(bevy::audio::Volume::new(0.58)),
+        },
+        MenuMusic,
+    ));
+}
+
+fn cleanup_menu_music(mut commands: Commands, query: Query<Entity, With<MenuMusic>>) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+}
+
+fn setup_game_over_music(mut commands: Commands, assets: Res<GameAssets>) {
+    commands.spawn((
+        AudioBundle {
+            source: assets.game_over_music.clone(),
+            settings: PlaybackSettings::LOOP.with_volume(bevy::audio::Volume::new(0.62)),
+        },
+        GameOverMusic,
+    ));
+}
+
+fn cleanup_game_over_music(mut commands: Commands, query: Query<Entity, With<GameOverMusic>>) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+}
 
 fn setup_playing(
     mut commands: Commands,
     assets: Res<GameAssets>,
     mut current_player: ResMut<CurrentPlayer>,
     mut timers: ResMut<GameTimers>,
+    mut skill_draft: ResMut<SkillDraftOptions>,
 ) {
     current_player.max_health = current_player.ship_class.max_health();
     current_player.health = current_player.ship_class.max_health();
@@ -846,19 +1222,39 @@ fn setup_playing(
     current_player.wave = 1;
     current_player.time_elapsed = 0.0;
     current_player.enemies_killed = 0;
-    current_player.status_message = format!("MISION INICIADA: {}", current_player.ship_class.short_name());
+    current_player.status_message = format!(
+        "MISION INICIADA: {}",
+        current_player.ship_class.short_name()
+    );
     current_player.status_timer = 2.8;
     current_player.invulnerable_timer = 0.0;
     current_player.combo_count = 0;
     current_player.combo_timer = 0.0;
     current_player.combo_multiplier = 1;
     current_player.max_combo = 0;
+    current_player.experience = 0;
+    current_player.class_upgrade_count = 0;
+    current_player.class_ability_levels = [0; 3];
+    refresh_experience_target(&mut current_player);
+    skill_draft.is_active = false;
+    skill_draft.options.clear();
     current_player.active_skills.clear();
     current_player.passive_skills.clear();
     current_player.active_cooldown_1 = 0.0;
     current_player.active_cooldown_2 = 0.0;
     current_player.beam_active_timer = 0.0;
     current_player.panic_recovery_used = false;
+    current_player.class_ability_cooldowns = [0.0; 3];
+    current_player.damage_reduction_timer = 0.0;
+    current_player.damage_reduction_mult = 1.0;
+    current_player.class_fire_rate_timer = 0.0;
+    current_player.class_fire_rate_mult = 1.0;
+    current_player.class_damage_timer = 0.0;
+    current_player.class_damage_mult = 1.0;
+    current_player.class_speed_timer = 0.0;
+    current_player.class_speed_mult = 1.0;
+    current_player.hunter_mark_timer = 0.0;
+    current_player.hunter_mark_crit_bonus = 0.0;
     current_player.fire_rate_mult = 1.0;
     current_player.damage_mult = 1.0;
     current_player.crit_chance = 0.0;
@@ -866,7 +1262,10 @@ fn setup_playing(
     current_player.cooldown_reduction = 1.0;
     current_player.powerup_drop_mult = 1.0;
 
-    timers.player_shoot = Timer::from_seconds(current_player.ship_class.fire_interval(), TimerMode::Repeating);
+    timers.player_shoot = Timer::from_seconds(
+        current_player.ship_class.fire_interval(),
+        TimerMode::Repeating,
+    );
     timers.enemy_spawn.reset();
     timers.wave_timer.reset();
     timers.boss_spawn_timer.reset();
@@ -952,6 +1351,7 @@ fn cleanup_playing(
     query_enemy_lasers: Query<Entity, With<EnemyLaser>>,
     query_particles: Query<Entity, With<ExplosionParticle>>,
     query_powerups: Query<Entity, With<PowerUpItem>>,
+    query_experience: Query<Entity, With<ExperienceOrb>>,
     query_planets: Query<Entity, With<BackgroundPlanet>>,
     query_bgm: Query<Entity, With<BackgroundMusic>>,
     query_thrusters: Query<Entity, With<ThrusterParticle>>,
@@ -961,22 +1361,74 @@ fn cleanup_playing(
     screen_shake.timer = 0.0;
     screen_shake.intensity = 0.0;
 
-    for e in query_player.iter() { commands.entity(e).despawn_recursive(); }
-    for e in query_shield.iter() { commands.entity(e).despawn_recursive(); }
-    for e in query_enemies.iter() { commands.entity(e).despawn_recursive(); }
-    for e in query_lasers.iter() { commands.entity(e).despawn_recursive(); }
-    for e in query_enemy_lasers.iter() { commands.entity(e).despawn_recursive(); }
-    for e in query_particles.iter() { commands.entity(e).despawn_recursive(); }
-    for e in query_thrusters.iter() { commands.entity(e).despawn_recursive(); }
-    for e in query_floating.iter() { commands.entity(e).despawn_recursive(); }
-    for e in query_powerups.iter() { commands.entity(e).despawn_recursive(); }
-    for e in query_planets.iter() { commands.entity(e).despawn_recursive(); }
-    for e in query_bgm.iter() { commands.entity(e).despawn_recursive(); }
+    for e in query_player.iter() {
+        commands.entity(e).despawn_recursive();
+    }
+    for e in query_shield.iter() {
+        commands.entity(e).despawn_recursive();
+    }
+    for e in query_enemies.iter() {
+        commands.entity(e).despawn_recursive();
+    }
+    for e in query_lasers.iter() {
+        commands.entity(e).despawn_recursive();
+    }
+    for e in query_enemy_lasers.iter() {
+        commands.entity(e).despawn_recursive();
+    }
+    for e in query_particles.iter() {
+        commands.entity(e).despawn_recursive();
+    }
+    for e in query_thrusters.iter() {
+        commands.entity(e).despawn_recursive();
+    }
+    for e in query_floating.iter() {
+        commands.entity(e).despawn_recursive();
+    }
+    for e in query_powerups.iter() {
+        commands.entity(e).despawn_recursive();
+    }
+    for e in query_experience.iter() {
+        commands.entity(e).despawn_recursive();
+    }
+    for e in query_planets.iter() {
+        commands.entity(e).despawn_recursive();
+    }
+    for e in query_bgm.iter() {
+        commands.entity(e).despawn_recursive();
+    }
 }
 
 // ============================================================================
 // Sistemas de Control y Disparos
 // ============================================================================
+
+fn touch_inside_rect(touch: Vec2, left: f32, top: f32, right: f32, bottom: f32) -> bool {
+    touch.x >= left && touch.x <= right && touch.y >= top && touch.y <= bottom
+}
+
+fn class_ability_index_at(position: Vec2, window: &Window) -> Option<usize> {
+    let right = window.width() - 12.0;
+    let bottom = window.height() - 78.0;
+    let row_left = right - 132.0;
+    let top_button_left = row_left + 34.0;
+
+    if touch_inside_rect(
+        position,
+        top_button_left,
+        bottom - 151.0,
+        top_button_left + 64.0,
+        bottom - 75.0,
+    ) {
+        Some(0)
+    } else if touch_inside_rect(position, row_left, bottom - 76.0, row_left + 64.0, bottom) {
+        Some(1)
+    } else if touch_inside_rect(position, row_left + 68.0, bottom - 76.0, right, bottom) {
+        Some(2)
+    } else {
+        None
+    }
+}
 
 fn player_input_system(
     time: Res<Time>,
@@ -993,7 +1445,12 @@ fn player_input_system(
 
     if let Ok(mut transform) = query.get_single_mut() {
         let dt = time.delta_seconds();
-        let speed = current_player.ship_class.speed() * current_player.speed_mult;
+        let class_speed = if current_player.class_speed_timer > 0.0 {
+            current_player.class_speed_mult
+        } else {
+            1.0
+        };
+        let speed = current_player.ship_class.speed() * current_player.speed_mult * class_speed;
 
         if keyboard.pressed(KeyCode::ArrowLeft) || keyboard.pressed(KeyCode::KeyA) {
             transform.translation.x -= speed * dt;
@@ -1008,8 +1465,39 @@ fn player_input_system(
             transform.translation.y -= speed * dt;
         }
 
-        if let Some(touch) = touches.first_pressed_position() {
-            if let Ok(window) = windows.get_single() {
+        if let Ok(window) = windows.get_single() {
+            // El dedo que empieza sobre un control pertenece a ese control.
+            // Si empezó en el espacio de juego, conserva el control aunque
+            // después se arrastre por encima de los botones.
+            let touch_starts_on_control = |position: Vec2| {
+                let class_ability_button = class_ability_index_at(position, window).is_some();
+
+                let active_skill_width =
+                    (current_player.active_skills.len() as f32 * 74.0).min(148.0);
+                let active_skill_button = !current_player.active_skills.is_empty()
+                    && touch_inside_rect(
+                        position,
+                        20.0,
+                        window.height() - 175.0,
+                        20.0 + active_skill_width,
+                        window.height() - 85.0,
+                    );
+
+                class_ability_button || active_skill_button
+            };
+
+            let touch_position = touches
+                .iter()
+                .find(|touch| !touch_starts_on_control(touch.start_position()))
+                .map(|touch| touch.position())
+                .or_else(|| {
+                    touches
+                        .iter_just_pressed()
+                        .find(|touch| !touch_starts_on_control(touch.start_position()))
+                        .map(|touch| touch.position())
+                });
+
+            if let Some(touch) = touch_position {
                 let target_x = touch.x - window.width() * 0.5;
                 let target_y = window.height() * 0.5 - touch.y + 45.0;
                 let lerp_speed = match current_player.ship_class {
@@ -1018,8 +1506,14 @@ fn player_input_system(
                     ShipClass::Defensor => 16.0,
                     ShipClass::Artillero => 18.0,
                 };
-                transform.translation.x = transform.translation.x.lerp(target_x, (dt * lerp_speed).min(1.0));
-                transform.translation.y = transform.translation.y.lerp(target_y, (dt * lerp_speed).min(1.0));
+                transform.translation.x = transform
+                    .translation
+                    .x
+                    .lerp(target_x, (dt * lerp_speed).min(1.0));
+                transform.translation.y = transform
+                    .translation
+                    .y
+                    .lerp(target_y, (dt * lerp_speed).min(1.0));
             }
         }
 
@@ -1032,7 +1526,10 @@ fn shield_visual_system(
     time: Res<Time>,
     mut current_player: ResMut<CurrentPlayer>,
     mut player_query: Query<(&Transform, &mut Sprite), (With<Player>, Without<PlayerShieldVisual>)>,
-    mut shield_query: Query<(&mut Transform, &mut Visibility, &mut Sprite), With<PlayerShieldVisual>>,
+    mut shield_query: Query<
+        (&mut Transform, &mut Visibility, &mut Sprite),
+        With<PlayerShieldVisual>,
+    >,
     skill_draft: Res<SkillDraftOptions>,
 ) {
     if skill_draft.is_active {
@@ -1057,7 +1554,9 @@ fn shield_visual_system(
             player_sprite.color = Color::WHITE;
         }
 
-        if let Ok((mut shield_tr, mut visibility, mut shield_sprite)) = shield_query.get_single_mut() {
+        if let Ok((mut shield_tr, mut visibility, mut shield_sprite)) =
+            shield_query.get_single_mut()
+        {
             shield_tr.translation = player_tr.translation;
             shield_tr.translation.z = 9.5;
 
@@ -1074,6 +1573,43 @@ fn shield_visual_system(
     }
 }
 
+fn spawn_laser_projectile(
+    commands: &mut Commands,
+    position: Vec2,
+    velocity: Vec2,
+    size: Vec2,
+    color: Color,
+    damage: f32,
+    is_crit: bool,
+    is_beam: bool,
+) {
+    let rotation = Quat::from_rotation_z(-velocity.x.atan2(velocity.y));
+    let mut projectile = commands.spawn((
+        SpriteBundle {
+            sprite: Sprite {
+                color,
+                custom_size: Some(size),
+                ..default()
+            },
+            transform: Transform {
+                translation: Vec3::new(position.x, position.y, 8.0),
+                rotation,
+                ..default()
+            },
+            ..default()
+        },
+        Laser {
+            velocity,
+            damage,
+            is_crit,
+        },
+    ));
+
+    if is_beam {
+        projectile.insert(ActiveBeam);
+    }
+}
+
 fn player_shoot_system(
     mut commands: Commands,
     time: Res<Time>,
@@ -1086,88 +1622,137 @@ fn player_shoot_system(
     if skill_draft.is_active {
         return;
     }
-    // Aplicar multiplicador de cadencia (Overclock Mutex)
-    let effective_interval = current_player.ship_class.fire_interval() / current_player.fire_rate_mult;
-    timers.player_shoot.set_duration(std::time::Duration::from_secs_f32(effective_interval.max(0.05)));
+
+    let fire_rate_bonus = if current_player.class_fire_rate_timer > 0.0 {
+        current_player.class_fire_rate_mult
+    } else {
+        1.0
+    };
+    let effective_interval = current_player.ship_class.fire_interval()
+        / (current_player.fire_rate_mult * fire_rate_bonus);
+    timers
+        .player_shoot
+        .set_duration(std::time::Duration::from_secs_f32(
+            effective_interval.max(0.05),
+        ));
     timers.player_shoot.tick(time.delta());
 
     if current_player.triple_shot_timer > 0.0 {
         current_player.triple_shot_timer -= time.delta_seconds();
     }
-
     if current_player.beam_active_timer > 0.0 {
         current_player.beam_active_timer -= time.delta_seconds();
     }
 
-    if timers.player_shoot.just_finished() {
-        if let Ok(player_tr) = query.get_single() {
-            play_sound(&mut commands, assets.snd_player_laser.clone(), 0.14);
-            let pos = player_tr.translation;
-            let ship_class = current_player.ship_class;
+    if !timers.player_shoot.just_finished() {
+        return;
+    }
 
-            let mut dmg = ship_class.laser_damage() * current_player.damage_mult;
-            if current_player.passive_skills.contains(&SkillId::MutexOverdrive) && current_player.shield <= 0.0 {
-                dmg *= 1.30;
-            }
+    if let Ok(player_tr) = query.get_single() {
+        play_sound(&mut commands, assets.snd_player_laser.clone(), 0.14);
+        let position = player_tr.translation.truncate();
+        let ship_class = current_player.ship_class;
+        let class_damage_bonus = if current_player.class_damage_timer > 0.0 {
+            current_player.class_damage_mult
+        } else {
+            1.0
+        };
 
-            let mut rng = rand::thread_rng();
-            let is_crit = rng.gen_bool(current_player.crit_chance.min(0.9) as f64);
-            if is_crit {
-                dmg *= 3.0;
-            }
+        let mut damage =
+            ship_class.laser_damage() * current_player.damage_mult * class_damage_bonus;
+        if current_player
+            .passive_skills
+            .contains(&SkillId::MutexOverdrive)
+            && current_player.shield <= 0.0
+        {
+            damage *= 1.30;
+        }
 
-            let l_color = if is_crit {
-                Color::srgb(1.0, 0.9, 0.2)
+        let mut rng = rand::thread_rng();
+        let crit_chance = current_player.crit_chance
+            + if current_player.hunter_mark_timer > 0.0 {
+                current_player.hunter_mark_crit_bonus
             } else {
-                ship_class.laser_color()
+                0.0
             };
-            let mut l_size = ship_class.laser_size();
-            if current_player.passive_skills.contains(&SkillId::MacroRules) {
-                l_size *= 1.30;
-            }
+        let is_crit = rng.gen_bool(crit_chance.min(0.9) as f64);
+        if is_crit {
+            damage *= 3.0;
+        }
 
-            if current_player.triple_shot_timer > 0.0 || current_player.passive_skills.contains(&SkillId::AsyncMultithread) {
-                let angles: &[(f32, f32)] = &[(-0.18, -14.0), (0.0, 0.0), (0.18, 14.0)];
-                for &(angle, offset_x) in angles {
-                    let vx = angle.sin() * 900.0;
-                    let vy = angle.cos() * 900.0;
-                    commands.spawn((
-                        SpriteBundle {
-                            sprite: Sprite {
-                                color: if is_crit { Color::srgb(1.0, 0.95, 0.3) } else { Color::srgb(1.0, 0.2, 0.9) },
-                                custom_size: Some(Vec2::new(l_size.x + 1.0, l_size.y)),
-                                ..default()
-                            },
-                            transform: Transform::from_xyz(pos.x + offset_x, pos.y + 24.0, 8.0),
-                            ..default()
-                        },
-                        Laser {
-                            velocity: Vec2::new(vx, vy),
-                            damage: dmg * 1.1,
-                            is_crit,
-                        },
-                    ));
+        let color = if is_crit {
+            Color::srgb(1.0, 0.9, 0.2)
+        } else {
+            ship_class.laser_color()
+        };
+        let mut size = ship_class.laser_size();
+        if current_player.passive_skills.contains(&SkillId::MacroRules) {
+            size *= 1.30;
+        }
+
+        // Cada clase tiene una silueta de disparo propia:
+        // Defensor = un cañón pesado, Mago = orbes, Asesino = doble aguja,
+        // Artillero = abanico de tres misiles.
+        let mut pattern: Vec<(f32, f32, f32)> = match ship_class {
+            ShipClass::Defensor => vec![(0.0, 0.0, 1.20)],
+            ShipClass::Mago => vec![(-0.045, -10.0, 0.82), (0.045, 10.0, 0.82)],
+            ShipClass::Asesino => vec![(-0.015, -17.0, 0.72), (0.015, 17.0, 0.72)],
+            ShipClass::Artillero => vec![(-0.18, -16.0, 0.84), (0.0, 0.0, 1.0), (0.18, 16.0, 0.84)],
+        };
+
+        if current_player.triple_shot_timer > 0.0
+            || current_player
+                .passive_skills
+                .contains(&SkillId::AsyncMultithread)
+        {
+            match ship_class {
+                ShipClass::Defensor => {
+                    pattern.extend([(-0.12, -18.0, 0.72), (0.12, 18.0, 0.72)]);
                 }
-            } else {
-                for offset_x in &[-18.0, 18.0] {
-                    commands.spawn((
-                        SpriteBundle {
-                            sprite: Sprite {
-                                color: l_color,
-                                custom_size: Some(l_size),
-                                ..default()
-                            },
-                            transform: Transform::from_xyz(pos.x + offset_x, pos.y + 24.0, 8.0),
-                            ..default()
-                        },
-                        Laser {
-                            velocity: Vec2::new(0.0, 880.0),
-                            damage: dmg,
-                            is_crit,
-                        },
-                    ));
+                ShipClass::Mago | ShipClass::Asesino => {
+                    pattern.push((0.0, 0.0, 0.90));
+                }
+                ShipClass::Artillero => {
+                    pattern.extend([(-0.30, -25.0, 0.66), (0.30, 25.0, 0.66)]);
                 }
             }
+        }
+
+        if current_player.beam_active_timer > 0.0 {
+            spawn_laser_projectile(
+                &mut commands,
+                position + Vec2::new(0.0, 35.0),
+                Vec2::new(0.0, 1250.0),
+                Vec2::new(30.0, 130.0),
+                Color::srgb(0.20, 0.95, 1.0),
+                damage * 3.0,
+                false,
+                true,
+            );
+            return;
+        }
+
+        let projectile_speed = match ship_class {
+            ShipClass::Defensor => 760.0,
+            ShipClass::Mago => 980.0,
+            ShipClass::Asesino => 1120.0,
+            ShipClass::Artillero => 780.0,
+        };
+        for (angle, offset_x, damage_mult) in pattern {
+            let velocity = Vec2::new(
+                angle.sin() * projectile_speed,
+                angle.cos() * projectile_speed,
+            );
+            spawn_laser_projectile(
+                &mut commands,
+                position + Vec2::new(offset_x, 24.0),
+                velocity,
+                size,
+                color,
+                damage * damage_mult,
+                is_crit,
+                false,
+            );
         }
     }
 }
@@ -1190,13 +1775,25 @@ fn passive_skills_system(
     if current_player.active_cooldown_2 > 0.0 {
         current_player.active_cooldown_2 = (current_player.active_cooldown_2 - dt).max(0.0);
     }
+    for cooldown in &mut current_player.class_ability_cooldowns {
+        *cooldown = (*cooldown - dt).max(0.0);
+    }
+    current_player.damage_reduction_timer = (current_player.damage_reduction_timer - dt).max(0.0);
+    current_player.class_fire_rate_timer = (current_player.class_fire_rate_timer - dt).max(0.0);
+    current_player.class_damage_timer = (current_player.class_damage_timer - dt).max(0.0);
+    current_player.class_speed_timer = (current_player.class_speed_timer - dt).max(0.0);
+    current_player.hunter_mark_timer = (current_player.hunter_mark_timer - dt).max(0.0);
 
     // Static Lifetime: Regenerar 1% HP/s
-    if current_player.passive_skills.contains(&SkillId::StaticLifetime) {
+    if current_player
+        .passive_skills
+        .contains(&SkillId::StaticLifetime)
+    {
         timers.regen_timer.tick(time.delta());
         if timers.regen_timer.just_finished() && current_player.health < current_player.max_health {
             let regen_amount = current_player.max_health * 0.01;
-            current_player.health = (current_player.health + regen_amount).min(current_player.max_health);
+            current_player.health =
+                (current_player.health + regen_amount).min(current_player.max_health);
         }
     }
 }
@@ -1268,7 +1865,8 @@ fn enemy_spawn_system(
         let x = rng.gen_range(-240.0..240.0);
         let speed_factor = 1.0 + (current_player.time_elapsed * 0.007).min(1.8);
         let base_speed = rng.gen_range(110.0..185.0) * speed_factor;
-        let health = (35.0 + (current_player.wave as f32 * 14.0)) * (1.0 + current_player.time_elapsed * 0.004);
+        let health = (35.0 + (current_player.wave as f32 * 14.0))
+            * (1.0 + current_player.time_elapsed * 0.004);
         let size = rng.gen_range(62.0..82.0);
         let score_val = 100 + (enemy_idx as u32 * 15);
 
@@ -1312,7 +1910,8 @@ fn enemy_spawn_system(
                 (-110.0, 520.0),
                 (110.0, 520.0),
             ];
-            let tex = assets.regular_enemies[rng.gen_range(0..assets.regular_enemies.len())].clone();
+            let tex =
+                assets.regular_enemies[rng.gen_range(0..assets.regular_enemies.len())].clone();
             for (off_x, spawn_y) in v_offsets {
                 commands.spawn((
                     SpriteBundle {
@@ -1363,7 +1962,8 @@ fn boss_spawn_system(
         let texture = assets.boss_enemies[boss_idx].clone();
 
         let boss_hp = 850.0 + (current_player.wave as f32 * 450.0);
-        current_player.status_message = "¡ALERTA DE AMENAZA! APARECE JEFE BORROW CHECKER".to_string();
+        current_player.status_message =
+            "¡ALERTA DE AMENAZA! APARECE JEFE BORROW CHECKER".to_string();
         current_player.status_timer = 4.0;
         trigger_vibration(300);
 
@@ -1486,7 +2086,11 @@ fn enemy_movement_system(
                                 custom_size: Some(Vec2::new(6.0, 18.0)),
                                 ..default()
                             },
-                            transform: Transform::from_xyz(transform.translation.x, transform.translation.y - 20.0, 7.0),
+                            transform: Transform::from_xyz(
+                                transform.translation.x,
+                                transform.translation.y - 20.0,
+                                7.0,
+                            ),
                             ..default()
                         },
                         EnemyLaser {
@@ -1529,8 +2133,12 @@ fn difficulty_and_wave_system(
         current_player.status_message = format!("OLEADA {}", current_player.wave);
         current_player.status_timer = 2.0;
 
-        let new_interval = (1.1 - (current_player.time_elapsed * 0.005) - (current_player.wave as f32 * 0.06)).max(0.32);
-        timers.enemy_spawn.set_duration(std::time::Duration::from_secs_f32(new_interval));
+        let new_interval =
+            (1.1 - (current_player.time_elapsed * 0.005) - (current_player.wave as f32 * 0.06))
+                .max(0.32);
+        timers
+            .enemy_spawn
+            .set_duration(std::time::Duration::from_secs_f32(new_interval));
     }
 }
 
@@ -1547,7 +2155,10 @@ fn powerup_system(
     skill_draft: Res<SkillDraftOptions>,
     mut query_powerups: Query<(Entity, &mut Transform, &PowerUpItem)>,
     query_player: Query<&Transform, (With<Player>, Without<PowerUpItem>, Without<Enemy>)>,
-    mut query_enemies: Query<(Entity, &mut Enemy, &Transform), (Without<Player>, Without<PowerUpItem>)>,
+    mut query_enemies: Query<
+        (Entity, &mut Enemy, &Transform),
+        (Without<Player>, Without<PowerUpItem>),
+    >,
     query_enemy_lasers: Query<Entity, With<EnemyLaser>>,
 ) {
     if skill_draft.is_active {
@@ -1572,16 +2183,25 @@ fn powerup_system(
                         current_player.status_message = "DISPARO TRIPLE OBTENIDO".to_string();
                     }
                     PowerUpType::Shield => {
-                        current_player.shield = (current_player.shield + 50.0).min(current_player.max_shield);
+                        current_player.shield =
+                            (current_player.shield + 50.0).min(current_player.max_shield);
                         current_player.shield_hit_timer = 0.45;
                         current_player.status_message = "ESCUDO RECARGADO".to_string();
                     }
                     PowerUpType::Health => {
-                        current_player.health = (current_player.health + 40.0).min(current_player.max_health);
+                        current_player.health =
+                            (current_player.health + 40.0).min(current_player.max_health);
                         current_player.status_message = "CASCO REPARADO (+40 HP)".to_string();
                     }
                     PowerUpType::Nuke => {
-                        trigger_nuke_effect(&mut commands, &assets, &mut current_player, &mut screen_shake, &mut query_enemies, &query_enemy_lasers);
+                        trigger_nuke_effect(
+                            &mut commands,
+                            &assets,
+                            &mut current_player,
+                            &mut screen_shake,
+                            &mut query_enemies,
+                            &query_enemy_lasers,
+                        );
                     }
                 }
                 play_sound(&mut commands, assets.snd_powerup_pickup.clone(), 0.48);
@@ -1598,12 +2218,91 @@ fn powerup_system(
     }
 }
 
+fn spawn_experience_orb(commands: &mut Commands, assets: &GameAssets, position: Vec2, value: u32) {
+    let pulse_phase = rand::thread_rng().gen_range(0.0..std::f32::consts::TAU);
+    commands.spawn((
+        SpriteBundle {
+            texture: assets.experience_orb.clone(),
+            sprite: Sprite {
+                color: Color::WHITE,
+                custom_size: Some(Vec2::splat(25.0)),
+                ..default()
+            },
+            transform: Transform::from_xyz(position.x, position.y, 8.6),
+            ..default()
+        },
+        ExperienceOrb {
+            value,
+            speed: 82.0,
+            pulse_phase,
+        },
+    ));
+}
+
+fn gain_experience(current_player: &mut CurrentPlayer, amount: u32) {
+    if current_player.class_upgrade_count >= 9 {
+        return;
+    }
+
+    current_player.experience += amount;
+    refresh_experience_target(current_player);
+}
+
+fn experience_orb_system(
+    mut commands: Commands,
+    time: Res<Time>,
+    assets: Res<GameAssets>,
+    mut current_player: ResMut<CurrentPlayer>,
+    skill_draft: Res<SkillDraftOptions>,
+    mut query_orbs: Query<(Entity, &mut Transform, &ExperienceOrb)>,
+    query_player: Query<&Transform, (With<Player>, Without<ExperienceOrb>)>,
+) {
+    if skill_draft.is_active {
+        return;
+    }
+
+    let Ok(player_transform) = query_player.get_single() else {
+        return;
+    };
+    let player_position = player_transform.translation.truncate();
+    let dt = time.delta_seconds();
+
+    for (orb_entity, mut orb_transform, orb) in query_orbs.iter_mut() {
+        let orb_position = orb_transform.translation.truncate();
+        let distance = player_position.distance(orb_position);
+
+        orb_transform.rotate_z(3.5 * dt);
+        let pulse = (time.elapsed_seconds() * 5.5 + orb.pulse_phase).sin() * 0.12 + 1.0;
+        orb_transform.scale = Vec3::splat(pulse);
+        if distance < 150.0 {
+            let direction = (player_position - orb_position).normalize_or_zero();
+            orb_transform.translation += (direction * (orb.speed + 180.0 * dt)).extend(0.0) * dt;
+        } else {
+            orb_transform.translation.y -= orb.speed * dt;
+        }
+
+        if distance < 42.0 {
+            gain_experience(&mut current_player, orb.value);
+            current_player.status_message = format!("+{} XP", orb.value);
+            current_player.status_timer = 0.8;
+            play_sound(&mut commands, assets.snd_powerup_pickup.clone(), 0.18);
+            spawn_spark(&mut commands, orb_position);
+            commands.entity(orb_entity).despawn();
+        } else if orb_transform.translation.y < -430.0 {
+            commands.entity(orb_entity).despawn();
+        }
+    }
+}
+
 fn trigger_nuke_effect(
     commands: &mut Commands,
     assets: &GameAssets,
     current_player: &mut CurrentPlayer,
     screen_shake: &mut ScreenShake,
-    query_enemies: &mut Query<(Entity, &mut Enemy, &Transform), (Without<Player>, Without<PowerUpItem>)>,
+    query_enemies: &mut Query<
+        (Entity, &mut Enemy, &Transform),
+        (Without<Player>, Without<PowerUpItem>),
+    >,
     query_enemy_lasers: &Query<Entity, With<EnemyLaser>>,
 ) {
     screen_shake.timer = 0.32;
@@ -1626,13 +2325,20 @@ fn trigger_nuke_effect(
                 play_sound(commands, assets.snd_boss_death.clone(), 0.70);
                 current_player.score += 1500;
                 current_player.enemies_killed += 1;
+                spawn_experience_orb(commands, assets, e_pos, 5);
                 current_player.status_message = "BORROW CHECKER SUPERADO (+1500 PTS)".to_string();
-                spawn_floating_text(commands, e_pos, "+1500 BORROW CHECKER", Color::srgb(1.0, 0.85, 0.2));
+                spawn_floating_text(
+                    commands,
+                    e_pos,
+                    "+1500 BORROW CHECKER",
+                    Color::srgb(1.0, 0.85, 0.2),
+                );
                 commands.entity(enemy_e).despawn();
             } else {
                 if !enemy.is_enraged && enemy.health <= enemy.max_health * 0.5 {
                     enemy.is_enraged = true;
-                    current_player.status_message = "ALERTA CRITICA: BORROW CHECKER EN MODO FURIA".to_string();
+                    current_player.status_message =
+                        "ALERTA CRITICA: BORROW CHECKER EN MODO FURIA".to_string();
                 } else {
                     current_player.status_message = "EMP IMPACTO AL JEFE (-150 HP)".to_string();
                 }
@@ -1644,6 +2350,7 @@ fn trigger_nuke_effect(
             play_sound(commands, assets.snd_enemy_death.clone(), 0.28);
             current_player.score += 75;
             current_player.enemies_killed += 1;
+            spawn_experience_orb(commands, assets, e_pos, 1);
             commands.entity(enemy_e).despawn();
         }
     }
@@ -1652,6 +2359,179 @@ fn trigger_nuke_effect(
     if !hit_boss {
         current_player.score += 300;
         current_player.status_message = "CARGO CLEAN: BOMBA EMP DETONADA".to_string();
+    }
+}
+
+fn activate_class_ability(
+    ability: ClassAbility,
+    ability_level: u8,
+    commands: &mut Commands,
+    assets: &GameAssets,
+    current_player: &mut CurrentPlayer,
+    player_position: Vec2,
+    screen_shake: &mut ScreenShake,
+    query_enemies: &mut Query<
+        (Entity, &mut Enemy, &Transform),
+        (Without<Player>, Without<PowerUpItem>),
+    >,
+    query_enemy_lasers: &Query<Entity, With<EnemyLaser>>,
+) {
+    let level_bonus = ability_level.min(3) as f32;
+    let ability_color = {
+        let [r, g, b] = ability.color_rgb();
+        Color::srgb(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0)
+    };
+
+    match ability {
+        ClassAbility::BastionProtocol => {
+            current_player.shield =
+                (current_player.shield + 65.0 + level_bonus * 15.0).min(current_player.max_shield);
+            current_player.damage_reduction_timer = 5.0 + level_bonus * 0.4;
+            current_player.damage_reduction_mult = 0.35;
+            current_player.shield_hit_timer = 0.6;
+            current_player.status_message = "BASTIÓN MUTEX: DAÑO REDUCIDO 5S".to_string();
+            current_player.status_timer = 2.5;
+            trigger_vibration(120);
+        }
+        ClassAbility::KineticPulse => {
+            trigger_nuke_effect(
+                commands,
+                assets,
+                current_player,
+                screen_shake,
+                query_enemies,
+                query_enemy_lasers,
+            );
+            current_player.status_message = "PULSO CINÉTICO: ¡LÍNEA DESPEJADA!".to_string();
+            current_player.status_timer = 2.5;
+        }
+        ClassAbility::HeavyOverdrive => {
+            current_player.class_fire_rate_timer = 5.0 + level_bonus * 0.5;
+            current_player.class_fire_rate_mult = 1.75 + level_bonus * 0.12;
+            current_player.class_damage_timer = 5.0 + level_bonus * 0.5;
+            current_player.class_damage_mult = 1.25 + level_bonus * 0.05;
+            current_player.status_message = "SOBRECARGA DEL TITÁN: CAÑÓN AL MÁXIMO".to_string();
+            current_player.status_timer = 3.0;
+            trigger_vibration(100);
+        }
+        ClassAbility::ArcaneNova => {
+            let damage =
+                current_player.ship_class.laser_damage() * current_player.damage_mult * 1.35;
+            let orb_count = 12 + ability_level.min(3) as usize * 4;
+            for index in 0..orb_count {
+                let angle = index as f32 * std::f32::consts::TAU / orb_count as f32;
+                let velocity = Vec2::new(angle.sin() * 620.0, angle.cos() * 620.0);
+                spawn_laser_projectile(
+                    commands,
+                    player_position,
+                    velocity,
+                    Vec2::new(9.0, 30.0),
+                    ability_color,
+                    damage,
+                    false,
+                    false,
+                );
+            }
+            spawn_bevy_explosion(commands, player_position);
+            screen_shake.timer = 0.22;
+            screen_shake.intensity = 5.0;
+            current_player.status_message = "NOVA ARCANA: ORBES EN TODAS DIRECCIONES".to_string();
+            current_player.status_timer = 2.5;
+            trigger_vibration(100);
+        }
+        ClassAbility::ZeroCostBeam => {
+            current_player.beam_active_timer = 3.0 + level_bonus * 0.5;
+            current_player.status_message = format!(
+                "RAYO ZERO-COST ACTIVADO ({:.1}S)",
+                current_player.beam_active_timer
+            );
+            current_player.status_timer = 3.0;
+            trigger_vibration(200);
+        }
+        ClassAbility::AetherShield => {
+            current_player.shield = current_player.max_shield;
+            current_player.shield_hit_timer = 0.65;
+            let duration = 1.5 + level_bonus * 0.25;
+            current_player.invulnerable_timer = current_player.invulnerable_timer.max(duration);
+            current_player.status_message = format!("ESCUDO ÉTER: INVULNERABLE {:.1}S", duration);
+            current_player.status_timer = 2.5;
+            trigger_vibration(100);
+        }
+        ClassAbility::PhaseShift => {
+            let duration = 2.0 + level_bonus * 0.3;
+            current_player.invulnerable_timer = current_player.invulnerable_timer.max(duration);
+            current_player.class_speed_timer = duration;
+            current_player.class_speed_mult = 2.1 + level_bonus * 0.15;
+            current_player.status_message = "FASE ASÍNCRONA: VELOCIDAD EXTREMA".to_string();
+            current_player.status_timer = 2.5;
+            trigger_vibration(140);
+        }
+        ClassAbility::TwinFang => {
+            current_player.class_fire_rate_timer = 4.0 + level_bonus * 0.5;
+            current_player.class_fire_rate_mult = 2.0 + level_bonus * 0.15;
+            current_player.class_damage_timer = 4.0 + level_bonus * 0.5;
+            current_player.class_damage_mult = 1.15 + level_bonus * 0.05;
+            current_player.status_message = "COLMILLO DOBLE: RÁFAGA VERDE x2".to_string();
+            current_player.status_timer = 2.5;
+            trigger_vibration(100);
+        }
+        ClassAbility::HunterMark => {
+            current_player.hunter_mark_timer = 6.0 + level_bonus;
+            current_player.hunter_mark_crit_bonus = 0.55 + level_bonus * 0.06;
+            current_player.status_message = "MARCA DEL CAZADOR: CRÍTICOS ACTIVADOS".to_string();
+            current_player.status_timer = 2.5;
+            trigger_vibration(100);
+        }
+        ClassAbility::MissileSalvo => {
+            let damage = current_player.ship_class.laser_damage()
+                * current_player.damage_mult
+                * (1.85 + level_bonus * 0.15);
+            for (angle, offset_x) in [
+                (-0.30_f32, -24.0_f32),
+                (-0.15_f32, -12.0_f32),
+                (0.0_f32, 0.0_f32),
+                (0.15_f32, 12.0_f32),
+                (0.30_f32, 24.0_f32),
+            ] {
+                let velocity = Vec2::new(angle.sin() * 700.0, angle.cos() * 700.0);
+                spawn_laser_projectile(
+                    commands,
+                    player_position + Vec2::new(offset_x, 25.0),
+                    velocity,
+                    Vec2::new(13.0, 42.0),
+                    ability_color,
+                    damage,
+                    false,
+                    false,
+                );
+            }
+            current_player.status_message = "SALVA DE MISILES: 5 PROYECTILES".to_string();
+            current_player.status_timer = 2.5;
+            trigger_vibration(160);
+        }
+        ClassAbility::CargoBombardment => {
+            trigger_nuke_effect(
+                commands,
+                assets,
+                current_player,
+                screen_shake,
+                query_enemies,
+                query_enemy_lasers,
+            );
+            current_player.status_message = "BOMBARDEO CARGO: EMP DETONADO".to_string();
+            current_player.status_timer = 2.5;
+        }
+        ClassAbility::FortifyArmor => {
+            current_player.health =
+                (current_player.health + 35.0 + level_bonus * 10.0).min(current_player.max_health);
+            current_player.shield =
+                (current_player.shield + 65.0 + level_bonus * 15.0).min(current_player.max_shield);
+            current_player.damage_reduction_timer = 4.0 + level_bonus * 0.3;
+            current_player.damage_reduction_mult = 0.50;
+            current_player.status_message = "BLINDAJE CARGO: CASCO Y ESCUDO REPARADOS".to_string();
+            current_player.status_timer = 2.5;
+            trigger_vibration(100);
+        }
     }
 }
 
@@ -1673,10 +2553,7 @@ fn spawn_powerup_item(commands: &mut Commands, assets: &GameAssets, pos: Vec2, k
             transform: Transform::from_xyz(pos.x, pos.y, 8.5),
             ..default()
         },
-        PowerUpItem {
-            kind,
-            speed: 75.0,
-        },
+        PowerUpItem { kind, speed: 75.0 },
     ));
 }
 
@@ -1688,19 +2565,28 @@ fn apply_damage_to_player(
     commands: &mut Commands,
     assets: &GameAssets,
     current_player: &mut ResMut<CurrentPlayer>,
-    damage: f32,
+    mut damage: f32,
 ) {
     if current_player.invulnerable_timer > 0.0 {
         return;
     }
 
+    if current_player.damage_reduction_timer > 0.0 {
+        damage *= current_player.damage_reduction_mult;
+    }
+
     // Panic Recovery Check
-    if current_player.passive_skills.contains(&SkillId::PanicRecovery) && !current_player.panic_recovery_used {
+    if current_player
+        .passive_skills
+        .contains(&SkillId::PanicRecovery)
+        && !current_player.panic_recovery_used
+    {
         let total_hp = current_player.health + current_player.shield;
         if total_hp <= damage {
             current_player.panic_recovery_used = true;
             current_player.invulnerable_timer = 2.5;
-            current_player.status_message = "¡PANIC RECOVERY ACTIVADO! (INVULNERABLE 2.5S)".to_string();
+            current_player.status_message =
+                "¡PANIC RECOVERY ACTIVADO! (INVULNERABLE 2.5S)".to_string();
             current_player.status_timer = 2.5;
             spawn_spark(commands, Vec2::ZERO);
             trigger_vibration(200);
@@ -1716,9 +2602,17 @@ fn apply_damage_to_player(
     play_sound(commands, assets.snd_player_damage.clone(), 0.40);
 
     // Borrow Checker: Reflejar 25% de daño a enemigos
-    if current_player.passive_skills.contains(&SkillId::BorrowChecker) {
+    if current_player
+        .passive_skills
+        .contains(&SkillId::BorrowChecker)
+    {
         let reflect_dmg = damage * 0.25;
-        spawn_floating_text(commands, Vec2::ZERO, &format!("REFLEJO {:.0}", reflect_dmg), Color::srgb(0.2, 1.0, 0.5));
+        spawn_floating_text(
+            commands,
+            Vec2::ZERO,
+            &format!("REFLEJO {:.0}", reflect_dmg),
+            Color::srgb(0.2, 1.0, 0.5),
+        );
     }
 
     if current_player.shield > 0.0 {
@@ -1767,9 +2661,14 @@ fn collision_system(
                 commands.entity(laser_entity).despawn();
                 enemy.health -= laser.damage;
 
-                if enemy.is_boss && !enemy.is_enraged && enemy.health <= enemy.max_health * 0.5 && enemy.health > 0.0 {
+                if enemy.is_boss
+                    && !enemy.is_enraged
+                    && enemy.health <= enemy.max_health * 0.5
+                    && enemy.health > 0.0
+                {
                     enemy.is_enraged = true;
-                    current_player.status_message = "ALERTA CRITICA: BORROW CHECKER EN MODO FURIA".to_string();
+                    current_player.status_message =
+                        "ALERTA CRITICA: BORROW CHECKER EN MODO FURIA".to_string();
                     current_player.status_timer = 4.0;
                     screen_shake.timer = 0.28;
                     screen_shake.intensity = 6.5;
@@ -1795,6 +2694,12 @@ fn collision_system(
                     current_player.enemies_killed += 1;
 
                     spawn_bevy_explosion(&mut commands, e_pos);
+                    spawn_experience_orb(
+                        &mut commands,
+                        &assets,
+                        e_pos,
+                        if enemy.is_boss { 5 } else { 1 },
+                    );
 
                     let drop_prob = 0.24 * current_player.powerup_drop_mult;
                     let should_drop = enemy.is_boss || rng.gen_bool(drop_prob.min(0.85) as f64);
@@ -1813,17 +2718,28 @@ fn collision_system(
                         screen_shake.intensity = 9.5;
                         trigger_vibration(280);
                         play_sound(&mut commands, assets.snd_boss_death.clone(), 0.70);
-                        current_player.status_message = "¡JEFE DERROTADO! ELIGE TU HABILIDAD".to_string();
+                        current_player.status_message =
+                            "¡JEFE DERROTADO! ELIGE TU HABILIDAD".to_string();
                         current_player.status_timer = 3.0;
 
                         // Lanzar Modal de Draft (3 Habilidades Aleatorias)
                         let all_skills = vec![
-                            SkillId::OverclockMutex, SkillId::AsyncMultithread, SkillId::ZeroCostBeam,
-                            SkillId::UnsafeBlock, SkillId::BorrowChecker, SkillId::PatternMatching,
-                            SkillId::CargoClean, SkillId::ArcMutex, SkillId::TokioReactor,
-                            SkillId::VectorCapacity, SkillId::PanicRecovery, SkillId::MutexOverdrive,
-                            SkillId::StaticLifetime, SkillId::MacroRules, SkillId::OptionSome,
-                            SkillId::ZeroCostAbstraction
+                            SkillId::OverclockMutex,
+                            SkillId::AsyncMultithread,
+                            SkillId::ZeroCostBeam,
+                            SkillId::UnsafeBlock,
+                            SkillId::BorrowChecker,
+                            SkillId::PatternMatching,
+                            SkillId::CargoClean,
+                            SkillId::ArcMutex,
+                            SkillId::TokioReactor,
+                            SkillId::VectorCapacity,
+                            SkillId::PanicRecovery,
+                            SkillId::MutexOverdrive,
+                            SkillId::StaticLifetime,
+                            SkillId::MacroRules,
+                            SkillId::OptionSome,
+                            SkillId::ZeroCostAbstraction,
                         ];
                         let mut chosen = Vec::new();
                         while chosen.len() < 3 {
@@ -1866,6 +2782,7 @@ fn collision_system(
                 apply_damage_to_player(&mut commands, &assets, &mut current_player, dmg);
                 spawn_bevy_explosion(&mut commands, e_pos);
                 if !enemy.is_boss {
+                    spawn_experience_orb(&mut commands, &assets, e_pos, 1);
                     commands.entity(enemy_entity).despawn();
                 }
             }
@@ -1972,7 +2889,10 @@ fn thruster_particle_system(
     mut commands: Commands,
     time: Res<Time>,
     query_player: Query<&Transform, With<Player>>,
-    mut query_particles: Query<(Entity, &mut Transform, &mut Sprite, &mut ThrusterParticle), Without<Player>>,
+    mut query_particles: Query<
+        (Entity, &mut Transform, &mut Sprite, &mut ThrusterParticle),
+        Without<Player>,
+    >,
 ) {
     let dt = time.delta_seconds();
     let mut rng = rand::thread_rng();
@@ -2130,11 +3050,13 @@ fn ui_name_input(
     let card_mago_id = contexts.add_image(assets.card_mago.clone_weak());
     let card_asesino_id = contexts.add_image(assets.card_asesino.clone_weak());
     let card_artillero_id = contexts.add_image(assets.card_artillero.clone_weak());
+    let primary_orange = egui::Color32::from_rgb(255, 140, 0);
+    let secondary_white = egui::Color32::WHITE;
 
     let ctx = contexts.ctx_mut();
 
     egui::CentralPanel::default()
-        .frame(egui::Frame::default().fill(egui::Color32::from_rgb(8, 12, 22)))
+        .frame(egui::Frame::default().fill(egui::Color32::from_rgb(8, 8, 8)))
         .show(ctx, |ui| {
             egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
@@ -2144,56 +3066,102 @@ fn ui_name_input(
                         ui.heading(
                             egui::RichText::new("FERRIS SPACE DEFENDER")
                                 .size(24.0)
-                                .color(egui::Color32::from_rgb(0, 220, 255))
+                                .color(primary_orange)
                                 .strong(),
                         );
                         ui.label(
                             egui::RichText::new("RUST PERU COMMUNITY EDITION")
                                 .size(12.0)
-                                .color(egui::Color32::from_rgb(255, 180, 50))
+                                .color(secondary_white)
                                 .strong(),
                         );
                         ui.add_space(10.0);
 
                         // Card Nombre del Piloto con Teclado Táctil Nativo
                         egui::Frame::default()
-                            .fill(egui::Color32::from_rgb(16, 24, 40))
-                            .stroke(egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(40, 80, 130)))
+                            .fill(egui::Color32::from_rgb(18, 18, 18))
+                            .stroke(egui::Stroke::new(1.0_f32, primary_orange))
                             .rounding(8.0)
                             .inner_margin(10.0)
                             .show(ui, |ui| {
-                                ui.set_max_width(340.0);
-                                ui.label(egui::RichText::new("IDENTIFICADOR DEL PILOTO").size(12.0).color(egui::Color32::LIGHT_BLUE).strong());
+                                ui.set_width(ui.available_width().min(340.0));
+                                ui.label(
+                                    egui::RichText::new("IDENTIFICADOR DEL PILOTO")
+                                        .size(12.0)
+                                        .color(secondary_white)
+                                        .strong(),
+                                );
                                 ui.add_space(4.0);
 
-                                let text_edit_response = ui.add(
+                                // El campo ocupaba solo 220x36 px dentro de una tarjeta de 340 px.
+                                // En una pantalla táctil eso hacía que muchos toques sobre el
+                                // placeholder no llegaran al TextEdit. Lo hacemos casi del ancho
+                                // completo y más alto para que toda la zona amarilla sea fácil de tocar.
+                                let input_width = ui.available_width().min(320.0);
+                                let text_edit_response = ui.add_sized(
+                                    egui::vec2(input_width, 52.0),
                                     egui::TextEdit::singleline(&mut current_player.name)
-                                        .hint_text("Toca para escribir tu nombre...")
-                                        .text_color(egui::Color32::YELLOW)
+                                        .hint_text(
+                                            egui::RichText::new("Toca para escribir tu nombre...")
+                                                .color(secondary_white),
+                                        )
+                                        .text_color(secondary_white)
                                         .font(egui::FontId::proportional(16.0))
                                         .margin(egui::vec2(8.0, 6.0))
-                                        .min_size(egui::vec2(220.0, 36.0)),
+                                        .desired_width(input_width),
                                 );
 
+                                // Pedimos el foco explícitamente al primer toque. Esto evita
+                                // depender de que egui y Android resuelvan el foco en el mismo
+                                // frame y hace que el teclado aparezca de forma consistente.
+                                if text_edit_response.clicked() {
+                                    ctx.memory_mut(|memory| {
+                                        memory.request_focus(text_edit_response.id)
+                                    });
+                                }
+
+                                let input_has_focus = text_edit_response.has_focus();
                                 if let Ok(mut window) = windows.get_single_mut() {
-                                    if text_edit_response.has_focus() {
+                                    if input_has_focus || text_edit_response.clicked() {
                                         window.ime_enabled = true;
                                         window.ime_position = Vec2::new(
                                             text_edit_response.rect.left(),
                                             text_edit_response.rect.bottom(),
                                         );
-                                    } else {
+                                    } else if !ctx.wants_keyboard_input() {
+                                        // Solo apagamos el IME cuando egui ya no tiene ningún
+                                        // control de texto activo. Así no cortamos el teclado
+                                        // durante la transición inicial del foco.
                                         window.ime_enabled = false;
                                     }
                                 }
 
                                 ui.add_space(4.0);
                                 ui.horizontal(|ui| {
-                                    if ui.button("Borrar").clicked() { current_player.name.clear(); }
-                                    if ui.button("Aleatorio").clicked() {
-                                        let n = ["Ferris_Pro", "Rustacean", "Async_King", "Cargo_Runner", "Borrow_God"];
+                                    if ui
+                                        .button(
+                                            egui::RichText::new("Borrar").color(secondary_white),
+                                        )
+                                        .clicked()
+                                    {
+                                        current_player.name.clear();
+                                    }
+                                    if ui
+                                        .button(
+                                            egui::RichText::new("Aleatorio").color(secondary_white),
+                                        )
+                                        .clicked()
+                                    {
+                                        let n = [
+                                            "Ferris_Pro",
+                                            "Rustacean",
+                                            "Async_King",
+                                            "Cargo_Runner",
+                                            "Borrow_God",
+                                        ];
                                         let mut rng = rand::thread_rng();
-                                        current_player.name = n[rng.gen_range(0..n.len())].to_string();
+                                        current_player.name =
+                                            n[rng.gen_range(0..n.len())].to_string();
                                     }
                                 });
                             });
@@ -2202,38 +3170,44 @@ fn ui_name_input(
                         ui.heading(
                             egui::RichText::new("SELECCIONA TU CLASE DE NAVE")
                                 .size(16.0)
-                                .color(egui::Color32::from_rgb(255, 215, 0))
+                                .color(primary_orange)
                                 .strong(),
                         );
                         ui.label(
-                            egui::RichText::new("Desliza verticalmente para explorar las 4 clases de naves")
-                                .size(11.0)
-                                .color(egui::Color32::GRAY),
+                            egui::RichText::new(
+                                "Desliza verticalmente para explorar las 4 clases de naves",
+                            )
+                            .size(11.0)
+                            .color(secondary_white),
                         );
                         ui.add_space(8.0);
 
                         // Lista Vertical de Cartas de Clase a Ancho Completo (Solo Imágenes Interactivas)
                         let class_items = [
-                            (ShipClass::Defensor, card_defensor_id, egui::Color32::from_rgb(255, 190, 40)),
-                            (ShipClass::Mago, card_mago_id, egui::Color32::from_rgb(40, 200, 255)),
-                            (ShipClass::Asesino, card_asesino_id, egui::Color32::from_rgb(50, 255, 120)),
-                            (ShipClass::Artillero, card_artillero_id, egui::Color32::from_rgb(255, 80, 50)),
+                            (ShipClass::Defensor, card_defensor_id),
+                            (ShipClass::Mago, card_mago_id),
+                            (ShipClass::Asesino, card_asesino_id),
+                            (ShipClass::Artillero, card_artillero_id),
                         ];
 
                         let avail_w = ui.available_width();
                         let card_w = (avail_w - 20.0).clamp(280.0, 340.0);
                         let card_h = card_w * (340.0 / 220.0);
 
-                        for (s_class, card_tex_id, theme_color) in class_items {
+                        for (s_class, card_tex_id) in class_items {
                             let is_selected = current_player.ship_class == s_class;
                             let frame_stroke = if is_selected {
-                                egui::Stroke::new(3.5_f32, theme_color)
+                                egui::Stroke::new(3.5_f32, primary_orange)
                             } else {
-                                egui::Stroke::new(1.0_f32, egui::Color32::from_rgb(40, 50, 70))
+                                egui::Stroke::new(1.0_f32, secondary_white)
                             };
 
                             egui::Frame::default()
-                                .fill(if is_selected { egui::Color32::from_rgb(20, 32, 55) } else { egui::Color32::from_rgb(10, 14, 24) })
+                                .fill(if is_selected {
+                                    egui::Color32::from_rgb(20, 20, 20)
+                                } else {
+                                    egui::Color32::from_rgb(10, 10, 10)
+                                })
                                 .stroke(frame_stroke)
                                 .rounding(12.0)
                                 .inner_margin(6.0)
@@ -2259,16 +3233,19 @@ fn ui_name_input(
                             egui::Button::new(
                                 egui::RichText::new("INICIAR MISION EN EL ESPACIO")
                                     .size(17.0)
-                                    .color(egui::Color32::WHITE)
+                                    .color(secondary_white)
                                     .strong(),
                             )
                             .min_size(egui::vec2(310.0, 48.0))
-                            .fill(egui::Color32::from_rgb(220, 40, 30)),
+                            .fill(primary_orange),
                         );
 
                         if btn_start.clicked() {
                             if current_player.name.trim().is_empty() {
                                 current_player.name = "Piloto_Rust".to_string();
+                            }
+                            if let Ok(mut window) = windows.get_single_mut() {
+                                window.ime_enabled = false;
                             }
                             next_state.set(AppState::Playing);
                         }
@@ -2277,24 +3254,41 @@ fn ui_name_input(
                         ui.heading(
                             egui::RichText::new("TABLA DE LIDERES (TOP 5)")
                                 .size(14.0)
-                                .color(egui::Color32::from_rgb(255, 215, 0)),
+                                .color(primary_orange),
                         );
                         ui.add_space(4.0);
 
                         egui::Frame::default()
-                            .fill(egui::Color32::from_rgb(12, 16, 28))
+                            .fill(egui::Color32::from_rgb(12, 12, 12))
                             .rounding(8.0)
                             .inner_margin(8.0)
                             .show(ui, |ui| {
-                                egui::Grid::new("init_leaderboard").striped(true).min_col_width(65.0).show(ui, |ui| {
-                                    for (idx, entry) in leaderboard.entries.iter().take(5).enumerate() {
-                                        ui.label(format!("{}.", idx + 1));
-                                        ui.label(&entry.name);
-                                        ui.label(format!("{} pts", entry.score));
-                                        ui.label(format!("Ola {}", entry.wave));
-                                        ui.end_row();
-                                    }
-                                });
+                                egui::Grid::new("init_leaderboard")
+                                    .striped(true)
+                                    .min_col_width(65.0)
+                                    .show(ui, |ui| {
+                                        for (idx, entry) in
+                                            leaderboard.entries.iter().take(5).enumerate()
+                                        {
+                                            ui.label(
+                                                egui::RichText::new(format!("{}.", idx + 1))
+                                                    .color(secondary_white),
+                                            );
+                                            ui.label(
+                                                egui::RichText::new(&entry.name)
+                                                    .color(secondary_white),
+                                            );
+                                            ui.label(
+                                                egui::RichText::new(format!("{} pts", entry.score))
+                                                    .color(secondary_white),
+                                            );
+                                            ui.label(
+                                                egui::RichText::new(format!("Ola {}", entry.wave))
+                                                    .color(secondary_white),
+                                            );
+                                            ui.end_row();
+                                        }
+                                    });
                             });
                         ui.add_space(20.0);
                     });
@@ -2323,7 +3317,6 @@ fn ui_skill_draft(
     }
 
     let ctx = contexts.ctx_mut();
-
     let screen_rect = ctx.screen_rect();
     let avail_w = screen_rect.width();
 
@@ -2359,11 +3352,14 @@ fn ui_skill_draft(
                             } else {
                                 current_player.passive_skills.push(skill);
                                 match skill {
-                                    SkillId::OverclockMutex => current_player.fire_rate_mult += 0.25,
+                                    SkillId::OverclockMutex => {
+                                        current_player.fire_rate_mult += 0.25
+                                    }
                                     SkillId::UnsafeBlock => {
                                         current_player.damage_mult += 0.40;
                                         current_player.max_health *= 0.85;
-                                        current_player.health = current_player.health.min(current_player.max_health);
+                                        current_player.health =
+                                            current_player.health.min(current_player.max_health);
                                     }
                                     SkillId::PatternMatching => current_player.crit_chance += 0.15,
                                     SkillId::TokioReactor => current_player.speed_mult += 0.20,
@@ -2372,7 +3368,9 @@ fn ui_skill_draft(
                                         current_player.shield += 50.0;
                                     }
                                     SkillId::OptionSome => current_player.powerup_drop_mult += 0.35,
-                                    SkillId::ZeroCostAbstraction => current_player.cooldown_reduction *= 0.80,
+                                    SkillId::ZeroCostAbstraction => {
+                                        current_player.cooldown_reduction *= 0.80
+                                    }
                                     _ => {}
                                 }
                             }
@@ -2385,23 +3383,248 @@ fn ui_skill_draft(
         });
 }
 
+fn handle_class_ability_press(
+    idx: usize,
+    ability: ClassAbility,
+    commands: &mut Commands,
+    assets: &GameAssets,
+    current_player: &mut CurrentPlayer,
+    screen_shake: &mut ScreenShake,
+    query_enemies: &mut Query<
+        (Entity, &mut Enemy, &Transform),
+        (Without<Player>, Without<PowerUpItem>),
+    >,
+    query_enemy_lasers: &Query<Entity, With<EnemyLaser>>,
+    query_player: &Query<&Transform, With<Player>>,
+) {
+    let level = current_player.class_ability_levels[idx].min(3);
+    let upgrade_cost = class_ability_upgrade_cost(level);
+    let can_upgrade = level < 3 && current_player.experience >= upgrade_cost;
+
+    if can_upgrade {
+        current_player.experience = current_player.experience.saturating_sub(upgrade_cost);
+        current_player.class_ability_levels[idx] = (level + 1).min(3);
+        current_player.class_upgrade_count = current_player.class_upgrade_count.saturating_add(1);
+        refresh_experience_target(current_player);
+        current_player.status_message = format!(
+            "{} SUBE A NIVEL {}",
+            ability.name(),
+            current_player.class_ability_levels[idx]
+        );
+        current_player.status_timer = 2.0;
+    } else if current_player.class_ability_cooldowns[idx] <= 0.0 {
+        current_player.class_ability_cooldowns[idx] =
+            ability.cooldown_for_level(level) * current_player.cooldown_reduction;
+        if let Ok(player_transform) = query_player.get_single() {
+            activate_class_ability(
+                ability,
+                level,
+                commands,
+                assets,
+                current_player,
+                player_transform.translation.truncate(),
+                screen_shake,
+                query_enemies,
+                query_enemy_lasers,
+            );
+        }
+    }
+}
+
+fn class_ability_touch_system(
+    touches: Res<Touches>,
+    windows: Query<&Window>,
+    skill_draft: Res<SkillDraftOptions>,
+    mut current_player: ResMut<CurrentPlayer>,
+    mut commands: Commands,
+    assets: Res<GameAssets>,
+    mut screen_shake: ResMut<ScreenShake>,
+    mut query_enemies: Query<
+        (Entity, &mut Enemy, &Transform),
+        (Without<Player>, Without<PowerUpItem>),
+    >,
+    query_enemy_lasers: Query<Entity, With<EnemyLaser>>,
+    query_player: Query<&Transform, With<Player>>,
+) {
+    if skill_draft.is_active || touches.iter().count() < 2 {
+        return;
+    }
+
+    let Ok(window) = windows.get_single() else {
+        return;
+    };
+    let class_abilities = current_player.ship_class.class_abilities();
+
+    for touch in touches.iter_just_pressed() {
+        let Some(idx) = class_ability_index_at(touch.start_position(), window) else {
+            continue;
+        };
+
+        handle_class_ability_press(
+            idx,
+            class_abilities[idx],
+            &mut commands,
+            &assets,
+            &mut current_player,
+            &mut screen_shake,
+            &mut query_enemies,
+            &query_enemy_lasers,
+            &query_player,
+        );
+        break;
+    }
+}
+
+fn draw_class_ability_button(
+    ui: &mut egui::Ui,
+    idx: usize,
+    ability: ClassAbility,
+    tex_id: Option<egui::TextureId>,
+    pulse_time: f32,
+    allow_pointer_press: bool,
+    current_player: &mut CurrentPlayer,
+    commands: &mut Commands,
+    assets: &GameAssets,
+    screen_shake: &mut ScreenShake,
+    query_enemies: &mut Query<
+        (Entity, &mut Enemy, &Transform),
+        (Without<Player>, Without<PowerUpItem>),
+    >,
+    query_enemy_lasers: &Query<Entity, With<EnemyLaser>>,
+    query_player: &Query<&Transform, With<Player>>,
+) {
+    let cooldown = current_player.class_ability_cooldowns[idx];
+    let level = current_player.class_ability_levels[idx].min(3);
+    let upgrade_cost = class_ability_upgrade_cost(level);
+    let can_upgrade = level < 3 && current_player.experience >= upgrade_cost;
+    let is_ready = cooldown <= 0.0;
+    let sense = if allow_pointer_press && (is_ready || can_upgrade) {
+        egui::Sense::click()
+    } else {
+        egui::Sense::hover()
+    };
+
+    let (rect, mut response) = ui.allocate_exact_size(egui::vec2(64.0, 76.0), sense);
+    let image_rect =
+        egui::Rect::from_min_max(rect.min, egui::pos2(rect.right(), rect.top() + 62.0));
+
+    // El icono queda flotando sin panel ni borde permanente. Solo se dibuja
+    // una capa temporal cuando la habilidad está en cooldown.
+    if let Some(tex_id) = tex_id {
+        let tint = if is_ready {
+            egui::Color32::WHITE
+        } else {
+            egui::Color32::from_gray(105)
+        };
+        ui.painter().image(
+            tex_id,
+            image_rect.shrink(2.0),
+            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+            tint,
+        );
+    }
+
+    if !is_ready {
+        ui.painter().rect_filled(
+            image_rect,
+            8.0,
+            egui::Color32::from_rgba_unmultiplied(0, 0, 0, 105),
+        );
+        ui.painter().text(
+            image_rect.center(),
+            egui::Align2::CENTER_CENTER,
+            format!("{:.1}", cooldown),
+            egui::FontId::proportional(12.0),
+            egui::Color32::WHITE,
+        );
+    }
+
+    let [r, g, b] = ability.color_rgb();
+    let level_color = egui::Color32::from_rgb(r, g, b);
+    let pulse = (pulse_time * 6.0).sin() * 0.5 + 0.5;
+    for level_index in 0..3 {
+        let center = egui::pos2(
+            rect.left() + rect.width() * (level_index as f32 + 1.0) / 4.0,
+            rect.bottom() - 7.0,
+        );
+        if level_index < level as usize {
+            ui.painter().circle_filled(center, 3.0, level_color);
+        } else if can_upgrade && level_index == level as usize {
+            let alpha = (120.0 + pulse * 135.0) as u8;
+            let radius = 3.0 + pulse * 1.6;
+            ui.painter().circle_filled(
+                center,
+                radius,
+                egui::Color32::from_rgba_unmultiplied(r, g, b, alpha),
+            );
+            ui.painter().circle_stroke(
+                center,
+                radius + 1.5,
+                egui::Stroke::new(1.0_f32, level_color),
+            );
+        } else {
+            ui.painter().circle_stroke(
+                center,
+                3.0,
+                egui::Stroke::new(1.0_f32, egui::Color32::from_gray(110)),
+            );
+        }
+    }
+
+    response = response.on_hover_text(if can_upgrade {
+        format!(
+            "MEJORAR {} a nivel {} · cuesta {} XP",
+            ability.name(),
+            level + 1,
+            upgrade_cost
+        )
+    } else {
+        ability.description().to_string()
+    });
+    if response.clicked() && allow_pointer_press {
+        handle_class_ability_press(
+            idx,
+            ability,
+            commands,
+            assets,
+            current_player,
+            screen_shake,
+            query_enemies,
+            query_enemy_lasers,
+            query_player,
+        );
+    }
+}
+
 // ============================================================================
 // UI CON EGUI: HUD de Juego y Botones Táctiles para Habilidades Activas
 // ============================================================================
 
 fn ui_playing_hud(
     mut contexts: EguiContexts,
+    time: Res<Time>,
+    touches: Res<Touches>,
     mut current_player: ResMut<CurrentPlayer>,
     mut commands: Commands,
     assets: Res<GameAssets>,
     mut screen_shake: ResMut<ScreenShake>,
-    mut query_enemies: Query<(Entity, &mut Enemy, &Transform), (Without<Player>, Without<PowerUpItem>)>,
+    mut query_enemies: Query<
+        (Entity, &mut Enemy, &Transform),
+        (Without<Player>, Without<PowerUpItem>),
+    >,
     query_enemy_lasers: Query<Entity, With<EnemyLaser>>,
+    query_player: Query<&Transform, With<Player>>,
 ) {
+    let allow_pointer_press = touches.iter().count() < 2;
     let mut skill_tex_map = HashMap::new();
     for (&skill, handle) in &assets.skill_textures {
         let tid = contexts.add_image(handle.clone_weak());
         skill_tex_map.insert(skill, tid);
+    }
+    let mut class_ability_tex_map = HashMap::new();
+    for (&ability, handle) in &assets.class_ability_textures {
+        let tid = contexts.add_image(handle.clone_weak());
+        class_ability_tex_map.insert(ability, tid);
     }
 
     let ctx = contexts.ctx_mut();
@@ -2421,16 +3644,42 @@ fn ui_playing_hud(
             ui.vertical(|ui| {
                 // Linea unica: HP - ESC - PTS - OLA
                 ui.horizontal(|ui| {
-                    let health_frac = (current_player.health / current_player.max_health).clamp(0.0, 1.0);
-                    let bar_color = if health_frac > 0.5 { egui::Color32::GREEN } else if health_frac > 0.25 { egui::Color32::YELLOW } else { egui::Color32::RED };
-                    ui.label(egui::RichText::new(format!("HP {:.0}%", health_frac * 100.0)).size(11.0).color(bar_color).strong());
-                    ui.add(egui::ProgressBar::new(health_frac).fill(bar_color).desired_width(45.0));
+                    let health_frac =
+                        (current_player.health / current_player.max_health).clamp(0.0, 1.0);
+                    let bar_color = if health_frac > 0.5 {
+                        egui::Color32::GREEN
+                    } else if health_frac > 0.25 {
+                        egui::Color32::YELLOW
+                    } else {
+                        egui::Color32::RED
+                    };
+                    ui.label(
+                        egui::RichText::new(format!("HP {:.0}%", health_frac * 100.0))
+                            .size(11.0)
+                            .color(bar_color)
+                            .strong(),
+                    );
+                    ui.add(
+                        egui::ProgressBar::new(health_frac)
+                            .fill(bar_color)
+                            .desired_width(45.0),
+                    );
 
                     if current_player.shield > 0.0 {
                         ui.add_space(4.0);
-                        let shield_frac = (current_player.shield / current_player.max_shield).clamp(0.0, 1.0);
-                        ui.label(egui::RichText::new(format!("ESC {:.0}", current_player.shield)).size(11.0).color(egui::Color32::from_rgb(80, 200, 255)).strong());
-                        ui.add(egui::ProgressBar::new(shield_frac).fill(egui::Color32::from_rgb(80, 200, 255)).desired_width(40.0));
+                        let shield_frac =
+                            (current_player.shield / current_player.max_shield).clamp(0.0, 1.0);
+                        ui.label(
+                            egui::RichText::new(format!("ESC {:.0}", current_player.shield))
+                                .size(11.0)
+                                .color(egui::Color32::from_rgb(80, 200, 255))
+                                .strong(),
+                        );
+                        ui.add(
+                            egui::ProgressBar::new(shield_frac)
+                                .fill(egui::Color32::from_rgb(80, 200, 255))
+                                .desired_width(40.0),
+                        );
                     }
 
                     ui.add_space(6.0);
@@ -2450,15 +3699,50 @@ fn ui_playing_hud(
                     );
                 });
 
+                let xp_frac = if current_player.experience_to_next == 0 {
+                    0.0
+                } else {
+                    current_player.experience as f32 / current_player.experience_to_next as f32
+                };
+                ui.horizontal(|ui| {
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "XP {}/{}",
+                            current_player.experience, current_player.experience_to_next
+                        ))
+                        .size(10.0)
+                        .color(egui::Color32::from_rgb(120, 225, 255))
+                        .strong(),
+                    );
+                    ui.add(
+                        egui::ProgressBar::new(xp_frac.clamp(0.0, 1.0))
+                            .fill(egui::Color32::from_rgb(40, 190, 235))
+                            .desired_width(95.0),
+                    );
+                });
+
                 // Barra de vida de Jefe
                 for (_, enemy, _) in query_enemies.iter() {
                     if enemy.is_boss {
                         ui.add_space(2.0);
                         let boss_frac = (enemy.health / enemy.max_health).clamp(0.0, 1.0);
-                        let bar_color = if enemy.is_enraged { egui::Color32::RED } else { egui::Color32::from_rgb(255, 140, 0) };
+                        let bar_color = if enemy.is_enraged {
+                            egui::Color32::RED
+                        } else {
+                            egui::Color32::from_rgb(255, 140, 0)
+                        };
                         ui.horizontal(|ui| {
-                            ui.label(egui::RichText::new("JEFE:").color(bar_color).size(12.0).strong());
-                            ui.add(egui::ProgressBar::new(boss_frac).fill(bar_color).desired_width(170.0));
+                            ui.label(
+                                egui::RichText::new("JEFE:")
+                                    .color(bar_color)
+                                    .size(12.0)
+                                    .strong(),
+                            );
+                            ui.add(
+                                egui::ProgressBar::new(boss_frac)
+                                    .fill(bar_color)
+                                    .desired_width(170.0),
+                            );
                         });
                     }
                 }
@@ -2473,7 +3757,11 @@ fn ui_playing_hud(
                 ui.horizontal(|ui| {
                     let active_skills = current_player.active_skills.clone();
                     for (idx, &skill) in active_skills.iter().enumerate() {
-                        let is_cd = if idx == 0 { current_player.active_cooldown_1 > 0.0 } else { current_player.active_cooldown_2 > 0.0 };
+                        let is_cd = if idx == 0 {
+                            current_player.active_cooldown_1 > 0.0
+                        } else {
+                            current_player.active_cooldown_2 > 0.0
+                        };
 
                         if let Some(&tex_id) = skill_tex_map.get(&skill) {
                             let frame_color = if is_cd {
@@ -2483,8 +3771,15 @@ fn ui_playing_hud(
                             };
 
                             egui::Frame::default()
-                                .fill(if is_cd { egui::Color32::from_rgba_unmultiplied(10, 12, 20, 200) } else { egui::Color32::from_rgba_unmultiplied(20, 40, 70, 220) })
-                                .stroke(egui::Stroke::new(if is_cd { 1.0_f32 } else { 2.5_f32 }, frame_color))
+                                .fill(if is_cd {
+                                    egui::Color32::from_rgba_unmultiplied(10, 12, 20, 200)
+                                } else {
+                                    egui::Color32::from_rgba_unmultiplied(20, 40, 70, 220)
+                                })
+                                .stroke(egui::Stroke::new(
+                                    if is_cd { 1.0_f32 } else { 2.5_f32 },
+                                    frame_color,
+                                ))
                                 .rounding(8.0)
                                 .inner_margin(4.0)
                                 .show(ui, |ui| {
@@ -2505,20 +3800,30 @@ fn ui_playing_hud(
 
                                     if img_btn.clicked() && !is_cd {
                                         if idx == 0 {
-                                            current_player.active_cooldown_1 = skill.cooldown() * current_player.cooldown_reduction;
+                                            current_player.active_cooldown_1 = skill.cooldown()
+                                                * current_player.cooldown_reduction;
                                         } else {
-                                            current_player.active_cooldown_2 = skill.cooldown() * current_player.cooldown_reduction;
+                                            current_player.active_cooldown_2 = skill.cooldown()
+                                                * current_player.cooldown_reduction;
                                         }
 
                                         match skill {
                                             SkillId::ZeroCostBeam => {
                                                 current_player.beam_active_timer = 3.0;
-                                                current_player.status_message = "ZERO-COST BEAM ACTIVADO (3S)".to_string();
+                                                current_player.status_message =
+                                                    "ZERO-COST BEAM ACTIVADO (3S)".to_string();
                                                 current_player.status_timer = 3.0;
                                                 trigger_vibration(200);
                                             }
                                             SkillId::CargoClean => {
-                                                trigger_nuke_effect(&mut commands, &assets, &mut current_player, &mut screen_shake, &mut query_enemies, &query_enemy_lasers);
+                                                trigger_nuke_effect(
+                                                    &mut commands,
+                                                    &assets,
+                                                    &mut current_player,
+                                                    &mut screen_shake,
+                                                    &mut query_enemies,
+                                                    &query_enemy_lasers,
+                                                );
                                             }
                                             _ => {}
                                         }
@@ -2530,6 +3835,66 @@ fn ui_playing_hud(
                 });
             });
     }
+
+    // Tres habilidades exclusivas de la nave seleccionada, siempre visibles
+    // en la esquina inferior derecha y separadas del draft roguelite. Forman
+    // una disposición triangular: una arriba y dos abajo.
+    let class_abilities = current_player.ship_class.class_abilities();
+    egui::Area::new(egui::Id::new("class_ability_touch_area"))
+        .anchor(egui::Align2::RIGHT_BOTTOM, egui::vec2(-12.0, -78.0))
+        .show(ctx, |ui| {
+            ui.vertical_centered(|ui| {
+                draw_class_ability_button(
+                    ui,
+                    0,
+                    class_abilities[0],
+                    class_ability_tex_map.get(&class_abilities[0]).copied(),
+                    time.elapsed_seconds(),
+                    allow_pointer_press,
+                    &mut current_player,
+                    &mut commands,
+                    &assets,
+                    &mut screen_shake,
+                    &mut query_enemies,
+                    &query_enemy_lasers,
+                    &query_player,
+                );
+                ui.add_space(-1.0);
+                ui.horizontal(|ui| {
+                    draw_class_ability_button(
+                        ui,
+                        1,
+                        class_abilities[1],
+                        class_ability_tex_map.get(&class_abilities[1]).copied(),
+                        time.elapsed_seconds(),
+                        allow_pointer_press,
+                        &mut current_player,
+                        &mut commands,
+                        &assets,
+                        &mut screen_shake,
+                        &mut query_enemies,
+                        &query_enemy_lasers,
+                        &query_player,
+                    );
+                    ui.add_space(4.0);
+                    draw_class_ability_button(
+                        ui,
+                        2,
+                        class_abilities[2],
+                        class_ability_tex_map.get(&class_abilities[2]).copied(),
+                        time.elapsed_seconds(),
+                        allow_pointer_press,
+                        &mut current_player,
+                        &mut commands,
+                        &assets,
+                        &mut screen_shake,
+                        &mut query_enemies,
+                        &query_enemy_lasers,
+                        &query_player,
+                    );
+                });
+            });
+        });
 }
 
 // ============================================================================
@@ -2539,7 +3904,6 @@ fn ui_playing_hud(
 fn ui_game_over(
     mut contexts: EguiContexts,
     current_player: Res<CurrentPlayer>,
-    leaderboard: Res<Leaderboard>,
     assets: Res<GameAssets>,
     mut next_state: ResMut<NextState<AppState>>,
 ) {
@@ -2547,94 +3911,75 @@ fn ui_game_over(
     let rank_a_id = contexts.add_image(assets.rank_a.clone_weak());
     let rank_b_id = contexts.add_image(assets.rank_b.clone_weak());
     let rank_c_id = contexts.add_image(assets.rank_c.clone_weak());
+    let primary_orange = egui::Color32::from_rgb(255, 140, 0);
+    let secondary_white = egui::Color32::WHITE;
 
     let ctx = contexts.ctx_mut();
+    let viewport_height = ctx.screen_rect().height();
 
     egui::CentralPanel::default()
-        .frame(egui::Frame::default().fill(egui::Color32::from_rgb(6, 4, 8)))
+        .frame(egui::Frame::default().fill(egui::Color32::from_rgb(6, 6, 6)))
         .show(ctx, |ui| {
             egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
                 .show(ui, |ui| {
                     ui.vertical_centered(|ui| {
-                        ui.add_space(45.0);
-                        ui.heading(
-                            egui::RichText::new("NAVE DESTRUIDA")
-                                .size(24.0)
-                                .color(egui::Color32::from_rgb(255, 60, 60))
-                                .strong(),
-                        );
-                        ui.add_space(6.0);
+                        // La carta es el elemento principal de la pantalla y conserva
+                        // su proporción original (1024 x 1536), aprovechando el ancho
+                        // disponible sin empujar los controles fuera de la pantalla.
+                        let card_width = (ui.available_width() - 24.0).clamp(220.0, 340.0);
+                        let card_height = card_width * 1.5;
 
-                        // Medalla de Rango Ganada (Requerimientos de Puntaje Torneo)
-                        let (rank_name, rank_color, rank_tex_id) = if current_player.score >= 200000 {
-                            ("RANGO S: LEYENDA DE RUST", egui::Color32::from_rgb(255, 215, 0), rank_s_id)
+                        // Centra verticalmente la tarjeta junto con sus controles inferiores.
+                        // El valor se calcula con la altura real de la pantalla para adaptarse
+                        // a distintos celulares y orientaciones.
+                        let content_height = card_height + 16.0 + 42.0 + 12.0 + 24.0 + 20.0;
+                        let top_space = ((viewport_height - content_height) * 0.5).max(8.0);
+                        ui.add_space(top_space);
+
+                        let rank_tex_id = if current_player.score >= 200000 {
+                            rank_s_id
                         } else if current_player.score >= 75000 {
-                            ("RANGO A: COMANDANTE SENIOR", egui::Color32::from_rgb(100, 240, 255), rank_a_id)
+                            rank_a_id
                         } else if current_player.score >= 25000 {
-                            ("RANGO B: PILOTO CERTIFICADO", egui::Color32::from_rgb(120, 255, 120), rank_b_id)
+                            rank_b_id
                         } else {
-                            ("RANGO C: CADETE SPACE", egui::Color32::from_rgb(200, 200, 200), rank_c_id)
+                            rank_c_id
                         };
 
-                        egui::Frame::default()
-                            .fill(egui::Color32::from_rgb(18, 14, 26))
-                            .stroke(egui::Stroke::new(2.0_f32, rank_color))
-                            .rounding(10.0)
-                            .inner_margin(12.0)
-                            .show(ui, |ui| {
-                                ui.set_max_width(340.0);
-                                ui.vertical(|ui| {
-                                    ui.add(egui::Image::new(egui::load::SizedTexture::new(
-                                        rank_tex_id,
-                                        egui::vec2(160.0, 210.0),
-                                    )));
-                                    ui.add_space(6.0);
-                                    ui.label(egui::RichText::new(rank_name).size(16.0).color(rank_color).strong());
-                                    ui.label(egui::RichText::new(format!("PUNTAJE FINAL: {} PTS", current_player.score)).size(18.0).color(egui::Color32::YELLOW).strong());
-                                });
-                            });
+                        // Solo la imagen de la tarjeta: sin borde, fondo, margen ni padding.
+                        ui.add(egui::Image::new(egui::load::SizedTexture::new(
+                            rank_tex_id,
+                            egui::vec2(card_width, card_height),
+                        )));
 
-                        ui.add_space(12.0);
+                        ui.add_space(16.0);
 
                         let btn_retry = ui.add(
                             egui::Button::new(
-                                egui::RichText::new("NUEVO INTENTO")
+                                egui::RichText::new("MENÚ")
                                     .size(15.0)
-                                    .color(egui::Color32::WHITE)
+                                    .color(secondary_white)
                                     .strong(),
                             )
                             .min_size(egui::vec2(280.0, 42.0))
-                            .fill(egui::Color32::from_rgb(30, 140, 230)),
+                            .fill(primary_orange),
                         );
 
                         if btn_retry.clicked() {
                             next_state.set(AppState::NameInput);
                         }
 
-                        ui.add_space(16.0);
-                        ui.heading(
-                            egui::RichText::new("TABLA DE CLASIFICACION")
-                                .size(14.0)
-                                .color(egui::Color32::YELLOW),
+                        ui.add_space(12.0);
+                        ui.label(
+                            egui::RichText::new(format!(
+                                "PUNTAJE FINAL: {} PTS",
+                                current_player.score
+                            ))
+                            .size(18.0)
+                            .color(secondary_white)
+                            .strong(),
                         );
-                        ui.add_space(4.0);
-
-                        egui::Frame::default()
-                            .fill(egui::Color32::from_rgb(22, 16, 24))
-                            .rounding(8.0)
-                            .inner_margin(8.0)
-                            .show(ui, |ui| {
-                                egui::Grid::new("gameover_grid").striped(true).min_col_width(65.0).show(ui, |ui| {
-                                    for (idx, entry) in leaderboard.entries.iter().take(8).enumerate() {
-                                        ui.label(format!("{}.", idx + 1));
-                                        ui.label(&entry.name);
-                                        ui.label(format!("{} pts", entry.score));
-                                        ui.label(format!("Ola {}", entry.wave));
-                                        ui.end_row();
-                                    }
-                                });
-                            });
                         ui.add_space(20.0);
                     });
                 });
