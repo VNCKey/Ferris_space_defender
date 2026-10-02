@@ -1,8 +1,16 @@
 pub mod classes;
+pub mod components;
+pub mod resources;
 pub mod state;
+pub mod systems;
+pub mod ui;
 
 pub use classes::*;
+pub use components::*;
+pub use resources::*;
 pub use state::*;
+pub use systems::*;
+pub use ui::*;
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
